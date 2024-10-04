@@ -47,8 +47,8 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
     }
 
     # Generate the file paths for the files
-    quantPath <- paste0(subfolder, "/quant", type, ".csv")
-    designPath <- paste0(subfolder, "/design", type, ".csv")
+    quantPath <- paste0(subfolder, "/quant.csv")
+    designPath <- paste0(subfolder, "/design.csv")
 
     generateFunction(nRuns = nRuns,
                       nFeatures = nFeatures,

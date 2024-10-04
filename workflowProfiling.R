@@ -4,7 +4,7 @@
 
 ################################# Parameters ###################################
 
-nfeaturesRange <- c(100, 500)
+nfeaturesRange <- c(500, 1000)
 
 nRunsRange <- c(4, 16)
 
@@ -14,9 +14,10 @@ nReplicates <- 1
 
 ############################### Sourcing #######################################
 
-source("workflowStepsR/01_DataImport.R")
+source("workflowSriptsR/01_DataImport.R")
 source("utilsR/generateTMT.R")
 source("utilsR/replicateData.R")
+source("utilsR/profilingWrapper.R")
 
 ############################# Packages loading #################################
 
@@ -39,6 +40,7 @@ replicateData(nFeaturesRange = nfeaturesRange,
 
 ############################# Profiling ########################################
 
+profilingWrapper(dataFolder = "profTemp", profOutPath = "profOutPath")
 
 ########################## Clean Out Temp Files ################################
 
