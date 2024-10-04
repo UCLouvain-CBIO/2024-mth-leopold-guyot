@@ -4,52 +4,50 @@
 
 library(scp)
 
-# Params:
-# - `nRuns` (`integer`) the number of runs
-# - `nPSM` (`integer`) the number of PSM by run
-# - `naRate` (`numeric`) the rate of missing values
+### Functions ###
 
-# Output: two tables, one with the quantitative data and
-# one with the experimental design
+generateTMTtoFile <- function(nRuns, nFeatures, naRate, quantPath, designPath) {
+    quantTable <- generateQuantTMT(nRuns, nFeatures, naRate)
+    designTable <- generateDesignTMT(nRuns)
 
-generateTMT <- function(nRuns, nPSM, naRate) {
-    # Generate the quantitative data
-    generateQuantTMT(nRuns, nPSM, naRate)
-
-    # WIP
+    write.csv(quantTable, file = quantPath, row.names = FALSE)
+    write.csv(designTable, file = designPath, row.names = FALSE)
 }
 
-generateQuantTMT <- function(nRuns, nPSM, naRate) {
-    base <- .generateQuantBaseTMT(nRuns, nPSM, naRate)
-    meta <- .generateQuantMetaTMT(nRuns, nPSM)
+generateQuantTMT <- function(nRuns, nFeatures, naRate) {
+    base <- .generateQuantBaseTMT(nRuns, nFeatures, naRate)
+    meta <- .generateQuantMetaTMT(nRuns, nFeatures)
 
     cbind(base, meta)
 }
 
 generateDesignTMT <- function(nRuns){
-    # WIP
+    base <- .generateDesignBaseTMT(nRuns)
+    meta <- .generateDesignMetaTMT(nRuns)
+
+    cbind(base, meta)
 }
 
-.generateQuantBaseTMT <- function(nRuns, nPSM, naRate) {
+.generateQuantBaseTMT <- function(nRuns, nFeatures, naRate) {
     res <- data.frame(
-        PSM = paste0("PSM", rep(1:nPSM, nRuns)),
-        run = rep(1:nRuns, each = nPSM),
-        `Reporter.ion.1` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.2` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.3` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.4` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.5` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.6` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.7` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.8` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.9` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.10` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.11` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.12` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.13` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.14` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.15` = runif(nRuns * nPSM, max = 10000),
-        `Reporter.ion.16` = runif(nRuns * nPSM, max = 10000)
+        PSM = paste0("PSM", rep(1:nFeatures, nRuns)),
+        run = paste0("run", rep(1:nRuns, each = nFeatures)),
+        `Reporter.ion.1` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.2` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.3` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.4` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.5` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.6` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.7` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.8` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.9` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.10` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.11` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.12` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.13` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.14` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.15` = runif(nRuns * nFeatures, max = 10000),
+        `Reporter.ion.16` = runif(nRuns * nFeatures, max = 10000)
     )
     reporter_cols <- grep("Reporter.ion", colnames(res))
     for (col in reporter_cols) {
@@ -62,15 +60,32 @@ generateDesignTMT <- function(nRuns){
     return(res)
 }
 
-.generateQuantMetaTMT <- function(nRuns, nPSM) {
-    metaRef <- read.csv(file = "data/refTMTQuantTable.csv")
+.generateQuantMetaTMT <- function(nRuns, nFeatures) {
+    metaRef <- read.csv(file = "data/refTMTQuantTable.csv", row.names = 1)
     metaCols <- grep("Reporter.intensity",
                      names(metaRef),
                      invert = TRUE,
                      value = TRUE)
     metaCols <- setdiff(metaCols, c("Raw.file", "uid"))
     metaRef <- metaRef[, metaCols]
-    res <- metaRef[sample(1:nrow(metaRef), nPSM*nRuns, replace = TRUE), ]
 
-    return(res)
+    metaRef[sample(1:nrow(metaRef), nFeatures*nRuns, replace = TRUE), ]
+}
+
+.generateDesignBaseTMT <- function(nRuns) {
+    x_column <- paste0("run", rep(1:nRuns, each = 16))
+    reporter_ion_column <- rep(paste0("Reporter.ion.", 1:16), times = nRuns)
+
+    data.frame(
+        runCol = x_column,
+        quantCols = reporter_ion_column
+    )
+}
+
+.generateDesignMetaTMT <- function(nRuns) {
+    # should maybe be created manually to avoid inconstistencies with design
+    metaRef <- read.csv(file = "data/refTMTDesignTable.csv", row.names = 1)
+    metaRef <- metaRef[sample(1:nrow(metaRef), nRuns * 16, replace = TRUE),]
+
+    subset(metaRef, select = -c(runCol, quantCols))
 }
