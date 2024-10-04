@@ -1,4 +1,4 @@
-profilingWrapper <- function(fun, dataFolder, profOutPath, ...) {
+profilingWrapper <- function(dataFolder, profOutPath, ...) {
 
     if (!dir.exists(profOutPath)) {
         dir.create(profOutPath)
