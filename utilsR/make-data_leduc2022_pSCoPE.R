@@ -1,5 +1,5 @@
 #
-####---- Leduc et al. 2022 ---####
+#### ---- Leduc et al. 2022 ---####
 
 
 ## Leduc, Andrew, R. Gray Huffman, and Nikolai Slavov. 2021. “Droplet
@@ -18,7 +18,7 @@ library("tidyverse")
 
 datadir <- "~/Documents/.localData/SCP/leduc2022/pSCoPE/"
 
-####---- Prepare sample annotations ----####
+#### ---- Prepare sample annotations ----####
 
 # Get LC and MS annotations with sample type annotations
 design <- read.csv(paste0(datadir, "CellenONE_data/annotation_18plex_well.csv"))
@@ -27,15 +27,18 @@ batch <- read.csv(paste0(datadir, "batch.csv"))
 # Clean the sample metadata so that it meets the requirements for
 # `scp::readSCP`. We first need to transform the design (set x
 # reporter ion) to a long table so that one line is one sample.
-design <- pivot_longer(design, -c(Set, well), names_to = "Channel",
-                       values_to = "SampleAnnotation")
+design <- pivot_longer(design, -c(Set, well),
+    names_to = "Channel",
+    values_to = "SampleAnnotation"
+)
 design$SampleType <- recode(design$SampleAnnotation,
-                            neg = "Negative",
-                            u = "Monocyte",
-                            m = "Melanoma",
-                            unused = "Unused",
-                            reference = "Reference",
-                            carrier = "Carrier")
+    neg = "Negative",
+    u = "Monocyte",
+    m = "Melanoma",
+    unused = "Unused",
+    reference = "Reference",
+    carrier = "Carrier"
+)
 
 # We then make some slight corrections to the batch data
 colnames(batch)[1] <- "Set" ## consistent naming with design
@@ -59,8 +62,9 @@ sampleAnnotation$MelanomaSubCluster <- recode(sampleAnnotation$MelanomaSubCluste
 # 2 utility functions:
 parseCellenoneFieldData <- function(file, ...) {
     out <- read.table(
-        file, sep = "\t", fill = TRUE, header = FALSE,
-        col.names = c("position", "well","volume"),  quote = "", ...
+        file,
+        sep = "\t", fill = TRUE, header = FALSE,
+        col.names = c("position", "well", "volume"), quote = "", ...
     )
     containsFieldData <- grepl("\\[\\d", out$position)
     fieldData <- out$position[containsFieldData]
@@ -73,7 +77,7 @@ parseCellenoneFieldData <- function(file, ...) {
     out
 }
 matchLayoutToPickup <- function(layout, pickup,
-                                coords = c("XPos","YPos")) {
+    coords = c("XPos", "YPos")) {
     require("yaImpute")
     out <- lapply(split(layout, layout$Field), function(x) {
         field <- unique(x$Field)
@@ -83,8 +87,8 @@ matchLayoutToPickup <- function(layout, pickup,
             ref = as.matrix(ref), target = as.matrix(target), k = 1
         )
         pickupIndex <- ann$knnIndexDist[, 1]
-        x$XPosPickup <- ref[pickupIndex,]$XPos
-        x$YPosPickup <- ref[pickupIndex,]$YPos
+        x$XPosPickup <- ref[pickupIndex, ]$XPos
+        x$YPosPickup <- ref[pickupIndex, ]$YPos
         x$PickupIndex <- as.character(pickupIndex)
         x
     })
@@ -118,22 +122,25 @@ cellenoneData$IsolationTimeStamp <- strptime(
 
 # Parse labelling information
 label <- parseCellenoneFieldData(
-    paste0(datadir, "CellenONE_data/Labels.txt"), skip = 22
+    paste0(datadir, "CellenONE_data/Labels.txt"),
+    skip = 22
 )
 label$Label <- as.numeric(sub("^.*[A-Z](.*),", "\\1", label$well)) + 4
 label$Label <- paste0("RI", label$Label)
 label <- dplyr::rename(label, WellLabel = well)
 label$WellLabel <- gsub("^1|,", "", label$WellLabel)
 cellenoneData <- left_join(
-    cellenoneData, label, by = join_by(XPos, YPos, Field)
+    cellenoneData, label,
+    by = join_by(XPos, YPos, Field)
 )
 
 # Parse sample pick-up for LC-MS information
 pickup <- parseCellenoneFieldData(
-    paste0(datadir, "CellenONE_data/SamplePickup.txt"), skip = 27
+    paste0(datadir, "CellenONE_data/SamplePickup.txt"),
+    skip = 27
 )
 pickup$Target <- 5 - ceiling(pickup$Field / 4)
-pickup$Field <- rep(c(1,2,3,4), each = 9)
+pickup$Field <- rep(c(1, 2, 3, 4), each = 9)
 pickup$well <- sub("^.*([A-Z].*),", "\\1", pickup$well)
 pickup <- dplyr::rename(pickup, WellPooled = well)
 cellenoneData <- matchLayoutToPickup(cellenoneData, pickup)
@@ -143,11 +150,12 @@ cellenoneData <- left_join(
 )
 cellenoneData <- dplyr::select(
     cellenoneData,
-    IsolationTimeStamp, Diameter, Elongation ,Target, Field, XPos, YPos,
+    IsolationTimeStamp, Diameter, Elongation, Target, Field, XPos, YPos,
     XPosPickup, YPosPickup, WellPooled, Label
 )
 cellenoneData <- dplyr::rename(
-    cellenoneData, GlassSlide = Target, XPosDrop = XPos, YPosDrop = YPos,
+    cellenoneData,
+    GlassSlide = Target, XPosDrop = XPos, YPosDrop = YPos,
     Channel = Label,
 )
 
@@ -161,24 +169,33 @@ sampleAnnotation <- dplyr::rename(sampleAnnotation, WellPooled = well)
 sampleAnnotation |>
     filter(!is.na(Field) & !is.na(GlassSlide)) |>
     ggplot() +
-    ggforce::geom_circle(aes(x0 = XPosPickup,
-                    y0 = YPosPickup,
-                    fill = lcbatch,
-                    r = 10),
-                color = "transparent") +
-    geom_point(aes(x = XPosDrop,
-                   y = YPosDrop,
-                   colour = SampleType
-                   )) +
-    geom_text(aes(x = XPosPickup,
-                  y = YPosPickup,
-                  label = WellPooled),
-              size = 3, colour = "white") +
+    ggforce::geom_circle(
+        aes(
+            x0 = XPosPickup,
+            y0 = YPosPickup,
+            fill = lcbatch,
+            r = 10
+        ),
+        color = "transparent"
+    ) +
+    geom_point(aes(
+        x = XPosDrop,
+        y = YPosDrop,
+        colour = SampleType
+    )) +
+    geom_text(
+        aes(
+            x = XPosPickup,
+            y = YPosPickup,
+            label = WellPooled
+        ),
+        size = 3, colour = "white"
+    ) +
     facet_grid(GlassSlide ~ Field, labeller = label_both) +
     theme_minimal() +
     scale_fill_manual(values = c("palegreen", "lightgoldenrod"))
 
-####---- Prepare PSM data ----####
+#### ---- Prepare PSM data ----####
 
 ev <- read.delim(paste0(datadir, "ev_updated.txt"))
 colnames(ev) <- gsub("^Reporter.intensity.(\\d*)$", "RI\\1", colnames(ev))
@@ -189,8 +206,9 @@ ev <- ev[ev$Set %in% sampleAnnotation$Set, ]
 
 ## Create the QFeatures object
 leduc2022_pSCoPE <- readSCP(ev, sampleAnnotation,
-                            channelCol = "Channel",
-                            batchCol = "Set")
+    channelCol = "Channel",
+    batchCol = "Set"
+)
 
 ## Clean protein names
 rdList <- lapply(rowData(leduc2022_pSCoPE), function(rd) {
@@ -202,7 +220,7 @@ rdList <- lapply(rowData(leduc2022_pSCoPE), function(rd) {
 })
 rowData(leduc2022_pSCoPE) <- rdList
 
-####---- Retrieve processed data ----####
+#### ---- Retrieve processed data ----####
 
 ## Retrieve the data processed by Leduc et al.
 sampleInd <- read.csv(paste0(datadir, "misc/sample_index.csv"), row.names = 2)
@@ -225,28 +243,37 @@ names(processedData) <- c("peptides", "peptides_log", "proteins_norm2", "protein
 
 ## Generate the peptide to protein table
 pep2prot <- rbindRowData(leduc2022_pSCoPE, names(leduc2022_pSCoPE)) %>%
-    data.frame %>%
+    data.frame() %>%
     group_by(modseq) %>%
-    summarise(Leading.razor.protein = paste(unique(Leading.razor.protein),
-                                            collapse = ";"),
-              Leading.razor.protein.id = paste(unique(Leading.razor.protein.id),
-                                               collapse = ";"),
-              Leading.razor.protein.symbol = paste(unique(Leading.razor.protein.symbol),
-                                                   collapse = ";")) %>%
-    data.frame
+    summarise(
+        Leading.razor.protein = paste(unique(Leading.razor.protein),
+            collapse = ";"
+        ),
+        Leading.razor.protein.id = paste(unique(Leading.razor.protein.id),
+            collapse = ";"
+        ),
+        Leading.razor.protein.symbol = paste(unique(Leading.razor.protein.symbol),
+            collapse = ";"
+        )
+    ) %>%
+    data.frame()
 rownames(pep2prot) <- pep2prot$modseq
 
 ## Add `peptides` data
 rowData(processedData$peptides) <- pep2prot[rownames(processedData$peptides), ]
 leduc2022_pSCoPE <- addAssay(leduc2022_pSCoPE, processedData$peptides, name = "peptides")
-leduc2022_pSCoPE <- addAssayLink(leduc2022_pSCoPE, from = 1:134, to = "peptides",
-                      varFrom = rep("modseq", 134), varTo = "modseq")
+leduc2022_pSCoPE <- addAssayLink(leduc2022_pSCoPE,
+    from = 1:134, to = "peptides",
+    varFrom = rep("modseq", 134), varTo = "modseq"
+)
 
 ## Add `peptides_log` data
 rowData(processedData$peptides_log) <- pep2prot[rownames(processedData$peptides_log), ]
 leduc2022_pSCoPE <- addAssay(leduc2022_pSCoPE, processedData$peptides_log, name = "peptides_log")
-leduc2022_pSCoPE <- addAssayLink(leduc2022_pSCoPE, from = "peptides", to = "peptides_log",
-                      varFrom = "modseq", varTo = "modseq")
+leduc2022_pSCoPE <- addAssayLink(leduc2022_pSCoPE,
+    from = "peptides", to = "peptides_log",
+    varFrom = "modseq", varTo = "modseq"
+)
 
 ## Add `proteins_norm2` data
 prots <- select(pep2prot, Leading.razor.protein, Leading.razor.protein.id, Leading.razor.protein.symbol)
@@ -254,9 +281,11 @@ prots <- prots[!duplicated(prots$Leading.razor.protein.id), ]
 rownames(prots) <- prots$Leading.razor.protein.id
 rowData(processedData$proteins_norm2) <- prots[rownames(processedData$proteins_norm2), ]
 leduc2022_pSCoPE <- addAssay(leduc2022_pSCoPE, processedData$proteins_norm2, name = "proteins_norm2")
-leduc2022_pSCoPE <- addAssayLink(leduc2022_pSCoPE, from = "peptides_log", to = "proteins_norm2",
-                      varFrom = "Leading.razor.protein.id",
-                      varTo = "Leading.razor.protein.id")
+leduc2022_pSCoPE <- addAssayLink(leduc2022_pSCoPE,
+    from = "peptides_log", to = "proteins_norm2",
+    varFrom = "Leading.razor.protein.id",
+    varTo = "Leading.razor.protein.id"
+)
 
 ## Add `proteins_processed` data
 rowData(processedData$proteins_processed) <- prots[rownames(processedData$proteins_processed), ]
@@ -276,6 +305,7 @@ leduc2022_pSCoPE$Channel <- factor(
 
 # Save data as Rda file
 save(leduc2022_pSCoPE,
-     file = "~/Documents/.localData/scpdata/leduc2022_pSCoPE.Rda",
-     compress = "xz",
-     compression_level = 9)
+    file = "~/Documents/.localData/scpdata/leduc2022_pSCoPE.Rda",
+    compress = "xz",
+    compression_level = 9
+)

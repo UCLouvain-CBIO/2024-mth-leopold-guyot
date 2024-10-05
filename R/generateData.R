@@ -4,43 +4,46 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
         dir.create(folder)
     }
     generateFunction <- switch(type,
-                               "TMT" = generateTMTtoFile,
-                               "LFDIA" = generateLFDIAtoFile,
-                               "plexDIA" = generatePlexDIAtoFile,
-                               stop("Unknown type in replicateData: ", type)
+        "TMT" = generateTMTtoFile,
+        "LFDIA" = generateLFDIAtoFile,
+        "plexDIA" = generatePlexDIAtoFile,
+        stop("Unknown type in replicateData: ", type)
     )
     for (nFeatures in nFeaturesRange) {
         for (nRuns in nRunsRange) {
             for (naRate in naRateRange) {
                 for (nReplicate in 1:nReplicates) {
-                    .createReplicate(nFeatures = nFeatures,
-                                     nRuns = nRuns,
-                                     naRate = naRate,
-                                     nReplicate = nReplicate,
-                                     type = type,
-                                     folder = folder,
-                                     generateFunction = generateFunction)
+                    .createReplicate(
+                        nFeatures = nFeatures,
+                        nRuns = nRuns,
+                        naRate = naRate,
+                        nReplicate = nReplicate,
+                        type = type,
+                        folder = folder,
+                        generateFunction = generateFunction
+                    )
                 }
-
             }
         }
     }
 }
 
 .createReplicate <- function(nFeatures,
-                             nRuns,
-                             naRate,
-                             nReplicate,
-                             type,
-                             folder,
-                             generateFunction) {
+    nRuns,
+    naRate,
+    nReplicate,
+    type,
+    folder,
+    generateFunction) {
     # Define the subfolder name based on the current combination
-    subfolder <- paste0(folder, "/",
-                        type,
-                        "_nFeatures_", nFeatures,
-                        "_nRuns_", nRuns,
-                        "_naRate_", naRate,
-                        "_replicate_", nReplicate)
+    subfolder <- paste0(
+        folder, "/",
+        type,
+        "_nFeatures_", nFeatures,
+        "_nRuns_", nRuns,
+        "_naRate_", naRate,
+        "_replicate_", nReplicate
+    )
 
     if (!dir.exists(subfolder)) {
         dir.create(subfolder)
@@ -50,14 +53,18 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
     quantPath <- paste0(subfolder, "/quant.csv")
     designPath <- paste0(subfolder, "/design.csv")
 
-    generateFunction(nRuns = nRuns,
-                     nFeatures = nFeatures,
-                     naRate = naRate,
-                     quantPath = quantPath,
-                     designPath = designPath)
+    generateFunction(
+        nRuns = nRuns,
+        nFeatures = nFeatures,
+        naRate = naRate,
+        quantPath = quantPath,
+        designPath = designPath
+    )
 
-    cat("Generated", type, "data for nFeatures =", nFeatures,
-        "nRuns =", nRuns, "naRate =", naRate, "in", subfolder, "\n")
+    cat(
+        "Generated", type, "data for nFeatures =", nFeatures,
+        "nRuns =", nRuns, "naRate =", naRate, "in", subfolder, "\n"
+    )
 }
 
 
@@ -84,14 +91,12 @@ generateQuantTMT <- function(nRuns, nFeatures, naRate) {
     cbind(base, meta)
 }
 
-generateDesignTMT <- function(nRuns){
-    base <- .generateDesignBaseTMT(nRuns)
-    meta <- .generateDesignMetaTMT(nRuns)
-
-    cbind(base, meta)
+generateDesignTMT <- function(nRuns) {
+    .generateDesignBaseTMT(nRuns)
 }
 
 .generateQuantBaseTMT <- function(nRuns, nFeatures, naRate) {
+    set.seed(123)
     res <- data.frame(
         PSM = paste0("PSM", rep(1:nFeatures, nRuns)),
         run = paste0("run", rep(1:nRuns, each = nFeatures)),
@@ -124,32 +129,28 @@ generateDesignTMT <- function(nRuns){
 }
 
 .generateQuantMetaTMT <- function(nRuns, nFeatures) {
+    set.seed(123)
     metaRef <- read.csv(file = "data/refTMTQuantTable.csv", row.names = 1)
     metaCols <- grep("Reporter.intensity",
-                     names(metaRef),
-                     invert = TRUE,
-                     value = TRUE)
+        names(metaRef),
+        invert = TRUE,
+        value = TRUE
+    )
     metaCols <- setdiff(metaCols, c("Raw.file", "uid"))
     metaRef <- metaRef[, metaCols]
 
-    metaRef[sample(1:nrow(metaRef), nFeatures*nRuns, replace = TRUE), ]
+    metaRef[sample(1:nrow(metaRef), nFeatures * nRuns, replace = TRUE), ]
 }
 
 .generateDesignBaseTMT <- function(nRuns) {
+    set.seed(123)
     x_column <- paste0("run", rep(1:nRuns, each = 16))
     reporter_ion_column <- rep(paste0("Reporter.ion.", 1:16), times = nRuns)
+    SampleType <- rep(c("Carrier", rep("Macrophage", 5), rep("Monocyte", 5), rep("Blank", 5)), nRuns)
 
     data.frame(
         runCol = x_column,
-        quantCols = reporter_ion_column
+        quantCols = reporter_ion_column,
+        SampleType = SampleType
     )
 }
-
-.generateDesignMetaTMT <- function(nRuns) {
-    # should maybe be created manually to avoid inconstistencies with design
-    metaRef <- read.csv(file = "data/refTMTDesignTable.csv", row.names = 1)
-    metaRef <- metaRef[sample(1:nrow(metaRef), nRuns * 16, replace = TRUE),]
-
-    subset(metaRef, select = -c(runCol, quantCols))
-}
-
