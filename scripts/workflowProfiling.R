@@ -52,10 +52,14 @@ main <- function() {
     ### plexed DIA-NN ###
 
     ############################# Profiling ####################################
+    profOutPath <- "dataOutput/profilingResults"
 
+    if (dir.exists(profOutPath)) {
+        unlink(profOutPath, recursive = TRUE)
+    }
     profilingWrapper(
         dataFolder = "profilingTemp",
-        profOutPath = "dataOutput/profilingResults"
+        profOutPath = profOutPath
     )
 }
 

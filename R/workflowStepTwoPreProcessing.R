@@ -49,14 +49,13 @@ stepPreProcessingTMT <- function(qfeatures, assays) {
 }
 
 .filterFDRTMT <- function(qfeatures, assays) {
-    # print("test")
-    # qfeatures <- pep2qvalue(qfeatures,
-    #                   i = assays,
-    #                   PEP = "dart_PEP",
-    #                   rowDataName = "qvalue_PSMs")
-    # # filterFeatures(qfeatures,
-    # #                 ~ qvalue_PSMs < 0.01,
-    # #                i = assays)
+    qfeatures <- pep2qvalue(qfeatures,
+                     i = assays,
+                     PEP = "PEP",
+                     groupBy = "Leading.razor.protein",
+                     rowDataName = "qvalueProteins")
+    filterFeatures(qfeatures,
+                          ~ qvalueProteins < 0.01)
 }
 
 .divideReferenceTMT <- function(qfeatures, assays) {

@@ -97,25 +97,26 @@ generateDesignTMT <- function(nRuns) {
 
 .generateQuantBaseTMT <- function(nRuns, nFeatures, naRate) {
     set.seed(123)
+    totalRows <- nRuns * nFeatures
     res <- data.frame(
         PSM = paste0("PSM", rep(1:nFeatures, nRuns)),
         run = paste0("run", rep(1:nRuns, each = nFeatures)),
-        `Reporter.ion.1` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.2` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.3` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.4` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.5` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.6` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.7` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.8` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.9` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.10` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.11` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.12` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.13` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.14` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.15` = runif(nRuns * nFeatures, max = 10000),
-        `Reporter.ion.16` = runif(nRuns * nFeatures, max = 10000)
+        `Reporter.ion.1` = runif(totalRows, max = 100000),
+        `Reporter.ion.2` = runif(totalRows, max = 1500),
+        `Reporter.ion.3` = runif(totalRows, max = 1500),
+        `Reporter.ion.4` = runif(totalRows, max = 1500),
+        `Reporter.ion.5` = runif(totalRows, max = 1500),
+        `Reporter.ion.6` = runif(totalRows, max = 1500),
+        `Reporter.ion.7` = runif(totalRows, max = 1500),
+        `Reporter.ion.8` = runif(totalRows, max = 1500),
+        `Reporter.ion.9` = runif(totalRows, max = 1500),
+        `Reporter.ion.10` = runif(totalRows, max = 1500),
+        `Reporter.ion.11` = runif(totalRows, max = 1500),
+        `Reporter.ion.12` = runif(totalRows, max = 1500),
+        `Reporter.ion.13` = runif(totalRows, max = 1500),
+        `Reporter.ion.14` = runif(totalRows, max = 1500),
+        `Reporter.ion.15` = runif(totalRows, max = 1500),
+        `Reporter.ion.16` = runif(totalRows, max = 1500)
     )
     reporter_cols <- grep("Reporter.ion", colnames(res))
     for (col in reporter_cols) {
@@ -125,21 +126,64 @@ generateDesignTMT <- function(nRuns) {
         res[zero_indices, col] <- 0
     }
 
+    # Add Leading.razor.protein column
+    protein_ids <- paste0("Protein", sample(floor(0.2 * totalRows),
+                                            totalRows, replace = TRUE))
+    res$Leading.razor.protein <- protein_ids
+
+    # Add PEP column with random probabilities
+    res$PEP <- pmin(pmax(abs(rnorm(totalRows, mean = 0.15, sd = 0.5)), 0), 1)
+
+    # Add PIF column with random fractions
+
+    pifValues <- rnorm(totalRows, mean = 0.8, sd = 0.25)
+    pifValues <- pmin(pmax(pifValues, 0), 1)  # Clip values to [0, 1]
+
+    # Set 15% of PIF values to NA
+    naPIF <- sample(1:totalRows, size = floor(0.15 * totalRows))
+    pifValues[naPIF] <- NA
+    res$PIF <- pifValues
+
+    # Add Reverse column with 5% of '+' and rest empty
+    res$Reverse <- ""
+    reverse_indices <- sample(1:(totalRows), size = floor(0.05 * totalRows))
+    res$Reverse[reverse_indices] <- "+"
+
+    # Add Potential.contaminant column with 5% of '+' and rest empty
+    res$Potential.contaminant <- ""
+    contaminant_indices <- sample(1:(totalRows), size = floor(0.05 * totalRows))
+    res$Potential.contaminant[contaminant_indices] <- "+"
+
+
     return(res)
 }
 
+# This function create filler column for the quantitative data. The goal is to
+# mimic the size of a typical rowData object in a TMT experience. We use here as
+# reference the leduc dataset. This dataset has a rowData that contains 114
+# variables. There are 85 `double`, 21 `character`, 3 `integer` and 5 `logical`.
+# We will mimic this distribution in the filler columns.
+# We generate 85 `double` columns, 21 `character` columns, 3 `integer` columns.
+
 .generateQuantMetaTMT <- function(nRuns, nFeatures) {
     set.seed(123)
-    metaRef <- read.csv(file = "data/refTMTQuantTable.csv", row.names = 1)
-    metaCols <- grep("Reporter.intensity",
-        names(metaRef),
-        invert = TRUE,
-        value = TRUE
-    )
-    metaCols <- setdiff(metaCols, c("Raw.file", "uid"))
-    metaRef <- metaRef[, metaCols]
+    totalRows <- nRuns * nFeatures
+    doubleCols <- replicate(85, rnorm(totalRows))
+    charCols <- replicate(21, sample(LETTERS, totalRows, replace = TRUE))
+    intCols <- replicate(3, sample(1:100, totalRows, replace = TRUE))
+    logicalCols <- replicate(5, sample(c(TRUE, FALSE), totalRows, replace = TRUE))
 
-    metaRef[sample(1:nrow(metaRef), nFeatures * nRuns, replace = TRUE), ]
+    data <- data.frame(doubleCols, charCols, intCols, logicalCols)
+
+    # Set column names
+    colnames(data) <- c(
+        paste0("Double_", seq(85)),
+        paste0("Char_", seq(21)),
+        paste0("Int_", seq(3)),
+        paste0("Logical_", seq(5))
+    )
+
+    return(data)
 }
 
 .generateDesignBaseTMT <- function(nRuns) {
@@ -153,4 +197,28 @@ generateDesignTMT <- function(nRuns) {
         quantCols = reporter_ion_column,
         SampleType = SampleType
     )
+}
+
+# This function create filler column for the design data. The goal is to
+# mimic the size of a typical colData object in a TMT experience. We use here as
+# reference the leduc dataset. This dataset has a colData that contains 18
+# variables. There are 8 `double`, 10 `character`.
+# We will mimic this distribution in the filler columns.
+# We generate 8 `double` columns, 10 `character` columns.
+
+.generateDesignMetaTMT <- function(nRuns) {
+    set.seed(123)
+    totalRows <- nRuns*16 # 16-TMT
+    doubleCols <- replicate(8, rnorm(totalRows))
+    charCols <- replicate(10, sample(LETTERS, totalRows, replace = TRUE))
+
+    data <- data.frame(doubleCols, charCols)
+
+    # Set column names
+    colnames(data) <- c(
+        paste0("Double_", seq(8)),
+        paste0("Char_", seq(10))
+    )
+
+    return(data)
 }
