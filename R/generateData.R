@@ -1,5 +1,10 @@
 ### Replicate Data Function ###
-replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, type, folder) {
+replicateData <- function(nFeaturesRange,
+                          nRunsRange,
+                          naRateRange,
+                          nReplicates,
+                          type,
+                          folder) {
     if (!dir.exists(folder)) {
         dir.create(folder)
     }
@@ -13,14 +18,23 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
         length(nRunsRange) *
         length(naRateRange) *
         nReplicates
-    pb <- txtProgressBar(min = 0, max = steps, style = 3)
-    currentStep <- 0
+
+    cat("Starting", type, " Generation ...")
+
+    pb <- progress_bar$new(
+        format = paste0(type,
+                        " Generation: (:percent) [:bar] ",
+                        ":current/:total | Elapsed: :elapsed"),
+        total = steps,
+        clear = FALSE,
+        width = 80
+    )
+    pb$tick(0)
 
     for (nFeatures in nFeaturesRange) {
         for (nRuns in nRunsRange) {
             for (naRate in naRateRange) {
                 for (nReplicate in 1:nReplicates) {
-                    currentStep <- currentStep + 1
                     .createReplicate(
                         nFeatures = nFeatures,
                         nRuns = nRuns,
@@ -30,12 +44,12 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
                         folder = folder,
                         generateFunction = generateFunction
                     )
-                    setTxtProgressBar(pb, currentStep)
+                    pb$tick()
                 }
             }
         }
     }
-    close(pb)
+    cat("TMT Generation Finished.\n")
 }
 
 .createReplicate <- function(nFeatures,
@@ -69,11 +83,6 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
         naRate = naRate,
         quantPath = quantPath,
         designPath = designPath
-    )
-
-    cat(
-        "\nGenerated", type, "data for nFeatures =", nFeatures,
-        "nRuns =", nRuns, "naRate =", naRate, "in", subfolder, "\n"
     )
 }
 
@@ -181,7 +190,8 @@ generateDesignTMT <- function(nRuns) {
     doubleCols <- replicate(85, rnorm(totalRows))
     charCols <- replicate(21, sample(LETTERS, totalRows, replace = TRUE))
     intCols <- replicate(3, sample(1:100, totalRows, replace = TRUE))
-    logicalCols <- replicate(5, sample(c(TRUE, FALSE), totalRows, replace = TRUE))
+    logicalCols <- replicate(5, sample(c(TRUE, FALSE),
+                                       totalRows, replace = TRUE))
 
     data <- data.frame(doubleCols, charCols, intCols, logicalCols)
 
@@ -200,7 +210,8 @@ generateDesignTMT <- function(nRuns) {
     set.seed(123)
     x_column <- paste0("run", rep(1:nRuns, each = 16))
     reporter_ion_column <- rep(paste0("Reporter.ion.", 1:16), times = nRuns)
-    SampleType <- rep(c("Carrier", rep("Macrophage", 5), rep("Monocyte", 5), rep("Blank", 5)), nRuns)
+    SampleType <- rep(c("Carrier", rep("Macrophage", 5),
+                        rep("Monocyte", 5), rep("Blank", 5)), nRuns)
 
     data.frame(
         runCol = x_column,

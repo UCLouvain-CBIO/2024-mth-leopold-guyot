@@ -18,13 +18,13 @@ stepPreProcessingTMT <- function(qfeatures, assays) {
 }
 
 .filterPSMTMT <- function(qfeatures, assays) {
-    filterFeatures(
+    suppressMessages(filterFeatures(
         qfeatures,
         ~ Reverse != "+" &
             Potential.contaminant != "+" &
             !is.na(PIF) & PIF > 0.8,
         i = assays
-    )
+    ))
 }
 
 .filterAssayTMT <- function(qfeatures) {
@@ -41,11 +41,11 @@ stepPreProcessingTMT <- function(qfeatures, assays) {
         sampleFUN = "mean",
         rowDataName = "MeanSCR"
     )
-    qfeatures <- filterFeatures(qfeatures,
+    qfeatures <- suppressMessages(filterFeatures(qfeatures,
         ~ !is.na(MeanSCR) &
             MeanSCR < 0.1,
         i = assays
-    )
+    ))
 }
 
 .filterFDRTMT <- function(qfeatures, assays) {
@@ -54,8 +54,8 @@ stepPreProcessingTMT <- function(qfeatures, assays) {
                      PEP = "PEP",
                      groupBy = "Leading.razor.protein",
                      rowDataName = "qvalueProteins")
-    filterFeatures(qfeatures,
-                          ~ qvalueProteins < 0.01)
+    suppressMessages(filterFeatures(qfeatures,
+                          ~ qvalueProteins < 0.01))
 }
 
 .divideReferenceTMT <- function(qfeatures, assays) {
