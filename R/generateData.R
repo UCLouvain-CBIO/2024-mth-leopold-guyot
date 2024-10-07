@@ -9,10 +9,18 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
         "plexDIA" = generatePlexDIAtoFile,
         stop("Unknown type in replicateData: ", type)
     )
+    steps <- length(nFeaturesRange) *
+        length(nRunsRange) *
+        length(naRateRange) *
+        nReplicates
+    pb <- txtProgressBar(min = 0, max = steps, style = 3)
+    currentStep <- 0
+
     for (nFeatures in nFeaturesRange) {
         for (nRuns in nRunsRange) {
             for (naRate in naRateRange) {
                 for (nReplicate in 1:nReplicates) {
+                    currentStep <- currentStep + 1
                     .createReplicate(
                         nFeatures = nFeatures,
                         nRuns = nRuns,
@@ -22,10 +30,12 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
                         folder = folder,
                         generateFunction = generateFunction
                     )
+                    setTxtProgressBar(pb, currentStep)
                 }
             }
         }
     }
+    close(pb)
 }
 
 .createReplicate <- function(nFeatures,
@@ -62,7 +72,7 @@ replicateData <- function(nFeaturesRange, nRunsRange, naRateRange, nReplicates, 
     )
 
     cat(
-        "Generated", type, "data for nFeatures =", nFeatures,
+        "\nGenerated", type, "data for nFeatures =", nFeatures,
         "nRuns =", nRuns, "naRate =", naRate, "in", subfolder, "\n"
     )
 }
