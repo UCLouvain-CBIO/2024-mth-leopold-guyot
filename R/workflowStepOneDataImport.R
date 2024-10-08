@@ -1,8 +1,8 @@
 ### Step for data import of quantitative proteomic data ###
 
 ### Packages ###
-
-library("scp")
+library("QFeatures", verbose = FALSE)
+library("scp", verbose = FALSE)
 
 ### Main function ###
 

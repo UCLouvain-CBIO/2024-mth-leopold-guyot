@@ -1,4 +1,4 @@
-library("progress")
+library("progress", verbose = FALSE)
 
 profilingWrapper <- function(dataFolder, profOutPath, ...) {
     if (!dir.exists(profOutPath)) {
@@ -50,4 +50,23 @@ profilingWorkflow <- function(quantPath,
 
     qfeatures <- stepAggregate(qfeatures, assays)
     assays <- grep("peptides_", names(qfeatures))
+}
+
+parseArgs <- function(args) {
+  parsed_args <- list()
+  i <- 1
+  while (i <= length(args)) {
+    # Check if the argument starts with '--'
+    if (startsWith(args[i], "--")) {
+      key <- sub("--", "", args[i])
+      if (i + 1 <= length(args) && !startsWith(args[i + 1], "--")) {
+        parsed_args[[key]] <- args[i + 1]
+        i <- i + 1
+      } else {
+        parsed_args[[key]] <- TRUE
+      }
+    }
+    i <- i + 1
+  }
+  return(parsed_args)
 }

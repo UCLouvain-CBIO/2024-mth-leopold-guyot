@@ -90,8 +90,8 @@ replicateData <- function(nFeaturesRange,
 ### Generate random 16-TMT data of desired size ###
 
 ### Package Loading ###
-
-library(scp)
+library(QFeatures, verbose = FALSE)
+library(scp, verbose = FALSE)
 
 ### Functions ###
 
