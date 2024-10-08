@@ -37,7 +37,7 @@ stepPreProcessingTMT <- function(qfeatures, assays) {
         i = assays,
         colvar = "SampleType",
         carrierPattern = "Carrier",
-        samplePattern = "Macrophage|Monocyte",
+        samplePattern = "Blank|Macrophage|Monocyte",
         sampleFUN = "mean",
         rowDataName = "MeanSCR"
     )

@@ -120,7 +120,7 @@ generateDesignTMT <- function(nRuns) {
     res <- data.frame(
         PSM = paste0("PSM", rep(1:nFeatures, nRuns)),
         run = paste0("run", rep(1:nRuns, each = nFeatures)),
-        `Reporter.ion.1` = runif(totalRows, max = 100000),
+        `Reporter.ion.1` = runif(totalRows,  max = 150000),
         `Reporter.ion.2` = runif(totalRows, max = 1500),
         `Reporter.ion.3` = runif(totalRows, max = 1500),
         `Reporter.ion.4` = runif(totalRows, max = 1500),
@@ -138,28 +138,32 @@ generateDesignTMT <- function(nRuns) {
         `Reporter.ion.16` = runif(totalRows, max = 1500)
     )
     reporter_cols <- grep("Reporter.ion", colnames(res))
-    for (col in reporter_cols) {
+    for (col in reporter_cols[-1]) {
         n <- nrow(res)
         # Randomly sample naRate of the indices
         zero_indices <- sample(1:n, size = floor(naRate * n))
         res[zero_indices, col] <- 0
     }
 
+    # Add peptidesId
+    proteinIds <- paste0("Peptide", sample(floor(0.5 * totalRows),
+                                           totalRows, replace = TRUE))
+    res$peptidesId <- proteinIds
+
     # Add Leading.razor.protein column
-    protein_ids <- paste0("Protein", sample(floor(0.2 * totalRows),
+    proteinIds <- paste0("Protein", sample(floor(0.2 * totalRows),
                                             totalRows, replace = TRUE))
-    res$Leading.razor.protein <- protein_ids
+    res$Leading.razor.protein <- proteinIds
 
     # Add PEP column with random probabilities
-    res$PEP <- pmin(pmax(abs(rnorm(totalRows, mean = 0.15, sd = 0.5)), 0), 1)
-
+    res$PEP <- pmin(pmax(rexp(totalRows, 30), 0), 1)
     # Add PIF column with random fractions
 
-    pifValues <- rnorm(totalRows, mean = 0.8, sd = 0.25)
+    pifValues <- rnorm(totalRows, mean = 0.95, sd = 0.25)
     pifValues <- pmin(pmax(pifValues, 0), 1)  # Clip values to [0, 1]
 
-    # Set 15% of PIF values to NA
-    naPIF <- sample(1:totalRows, size = floor(0.15 * totalRows))
+    # Set 10% of PIF values to NA
+    naPIF <- sample(1:totalRows, size = floor(0.1 * totalRows))
     pifValues[naPIF] <- NA
     res$PIF <- pifValues
 

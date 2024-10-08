@@ -9,10 +9,10 @@ profilingWrapper <- function(dataFolder, profOutPath, ...) {
     folders <- list.dirs(dataFolder, full.names = TRUE, recursive = FALSE)
     cat("Starting Workflow Profiling ...")
     pb <- progress_bar$new(
-        format = paste0(":spin Workflow Profiling: (:percent)",
+        format = paste0("Workflow Profiling: (:percent)",
                         " [:bar] :current/:total | Elapsed: :elapsed"),
         total = length(folders),
-        clear = FALSE,              # Keep the progress output in the console
+        clear = FALSE,
         width = 80
     )
     pb$tick(0)
@@ -45,6 +45,9 @@ profilingWorkflow <- function(quantPath,
                               type) {
     qfeatures <- stepDataImport(quantPath, designPath, runCol, dataDIA, type)
     assays <- 1:length(qfeatures)
+
     qfeatures <- stepPreProcessing(qfeatures, assays, type)
-    qfeatures
+
+    qfeatures <- stepAggregate(qfeatures, assays)
+    assays <- grep("peptides_", names(qfeatures))
 }

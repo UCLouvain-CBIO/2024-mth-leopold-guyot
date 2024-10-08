@@ -8,7 +8,7 @@ nfeaturesRange <- c(500, 1000)
 
 nRunsRange <- c(4, 8)
 
-naRateRange <- c(0.5, 0.7)
+naRateRange <- c(0.4, 0.6)
 
 nReplicates <- 1
 
@@ -16,6 +16,7 @@ nReplicates <- 1
 
 source(file.path("R", "workflowStepOneDataImport.R"))
 source(file.path("R", "workflowStepTwoPreProcessing.R"))
+source(file.path("R", "workflowStepAggregation.R"))
 
 source(file.path("R", "generateData.R"))
 source(file.path("R", "profilingUtils.R"))
