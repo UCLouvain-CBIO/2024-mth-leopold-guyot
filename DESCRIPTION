@@ -1,0 +1,13 @@
+Package: benchmarkQFeatures
+Title: A collection of benchmarking procedure to evaluate the performance of
+    QFeatures
+Version: 0.0.0.9000
+Authors@R: 
+    person("Léopold", "Guyot", , "leopold.guyot@ulb.be", role = c("aut", "cre"),
+    )
+Description: Provide a collection of benchmarking procedure to evaluate the
+    performance of the QFeatures package using Rprof
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
