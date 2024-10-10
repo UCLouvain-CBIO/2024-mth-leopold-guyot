@@ -9,5 +9,13 @@ Description: Provide a collection of benchmarking procedure to evaluate the
     performance of the QFeatures package using Rprof
 License: MIT + file LICENSE
 Encoding: UTF-8
+Imports:
+    scp,
+    QFeatures,
+    utils,
+    matrixStats,
+    progress
+Depends:
+    R (>= 4.4.1)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

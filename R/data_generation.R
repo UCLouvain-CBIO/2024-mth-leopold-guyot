@@ -1,17 +1,31 @@
-### Replicate Data Function ###
-#' Title
+#' Generate Replicated Proteomic Data
 #'
-#' @param nFeaturesRange
-#' @param nRunsRange
-#' @param naRateRange
-#' @param nReplicates
-#' @param type
-#' @param folder
+#' This function generates replicated proteomic datasets with varying numbers of features,
+#' runs, and missing data rates. The generated datasets are saved to the specified folder
+#' and can be created for TMT, LFDIA, or plexDIA data types.
 #'
-#' @return
-#' @export
+#' @param nFeaturesRange A numeric vector specifying the range of feature counts to generate.
+#' @param nRunsRange A numeric vector specifying the range of run counts to generate.
+#' @param naRateRange A numeric vector specifying the range of missing data rates (NA rates)
+#'        to apply during data generation.
+#' @param nReplicates An integer specifying the number of replicates to generate for each
+#'        combination of parameters.
+#' @param type A character string specifying the data type to generate. Accepted values
+#'        are "TMT", "LFDIA", or "plexDIA".
+#' @param folder A character string specifying the directory path where the generated datasets
+#'        will be saved.
+#'
+#' @return No return value. This function generates files and saves them to the specified folder.
 #'
 #' @examples
+#' # Generate replicated data for TMT with specified parameter ranges
+#' # replicateData(nFeaturesRange = 50:100, nRunsRange = 5:10,
+#' #               naRateRange = c(0, 0.1), nReplicates = 3,
+#' #               type = "TMT", folder = "data_folder")
+#'
+#' @import progress
+#'
+#' @export
 replicateData <- function(nFeaturesRange,
     nRunsRange,
     naRateRange,
@@ -67,6 +81,22 @@ replicateData <- function(nFeaturesRange,
     cat("TMT Generation Finished.\n")
 }
 
+#' Create a Single Replicate of Proteomic Data
+#'
+#' This internal helper function generates a single replicate of proteomic data
+#' based on the specified parameters and saves it to the appropriate subfolder.
+#'
+#' @param nFeatures An integer specifying the number of features to generate in the dataset.
+#' @param nRuns An integer specifying the number of runs or experiments to generate.
+#' @param naRate A numeric value specifying the rate of missing data (NA rate) to apply.
+#' @param nReplicate An integer indicating the replicate number for the given parameter combination.
+#' @param type A character string specifying the type of data to generate ("TMT", "LFDIA", or "plexDIA").
+#' @param folder A character string specifying the main folder where the dataset will be saved.
+#' @param generateFunction A function that generates the dataset based on the type of data.
+#'
+#' @return No return value. This function generates files and saves them to the specified folder.
+#'
+#' @keywords internal
 .createReplicate <- function(
         nFeatures,
         nRuns,
@@ -102,34 +132,78 @@ replicateData <- function(nFeaturesRange,
     )
 }
 
-
-### Generate random 16-TMT data of desired size ###
-
-### Package Loading ###
-library(QFeatures, verbose = FALSE)
-library(scp, verbose = FALSE)
-
-### Functions ###
-
+#' Generate 16-TMT Quantitative Data and Save to File
+#'
+#' This function generates synthetic quantitative 16-TMT data along with experimental design data
+#' and saves them as CSV files. The generated data includes random values with customizable
+#' missing data rates.
+#'
+#' @param nRuns Integer. The number of runs to generate.
+#' @param nFeatures Integer. The number of features per run.
+#' @param naRate Numeric. The rate of missing values (0-1) to introduce into the quantitative data.
+#' @param quantPath Character. The file path where the quantitative data will be saved.
+#' @param designPath Character. The file path where the design data will be saved.
+#'
+#' @return No return value. This function generates and saves files.
+#'
+#' @examples
+#' # Generate data for 5 runs, 100 features per run, with 10% missing data
+#' # generateTMTtoFile(nRuns = 5, nFeatures = 100, naRate = 0.1,
+#' #                  quantPath = "quant.csv", designPath = "design.csv")
+#'
+#' @export
 generateTMTtoFile <- function(nRuns, nFeatures, naRate, quantPath, designPath) {
-    quantTable <- generateQuantTMT(nRuns, nFeatures, naRate)
-    designTable <- generateDesignTMT(nRuns)
+    quantTable <- .generateQuantTMT(nRuns, nFeatures, naRate)
+    designTable <- .generateDesignTMT(nRuns)
 
     write.csv(quantTable, file = quantPath, row.names = FALSE)
     write.csv(designTable, file = designPath, row.names = FALSE)
 }
 
-generateQuantTMT <- function(nRuns, nFeatures, naRate) {
+#' Generate Quantitative Data for 16-TMT
+#'
+#' This function creates synthetic quantitative data for a 16-TMT experiment.
+#' Data includes reporter ion intensities and various metadata columns.
+#'
+#' @param nRuns Integer. The number of experimental runs.
+#' @param nFeatures Integer. The number of features per run.
+#' @param naRate Numeric. The proportion of missing data to introduce.
+#'
+#' @return A data.frame containing the synthetic quantitative data for 16-TMT.
+#'
+#' @keywords internal
+.generateQuantTMT <- function(nRuns, nFeatures, naRate) {
     base <- .generateQuantBaseTMT(nRuns, nFeatures, naRate)
     meta <- .generateQuantMetaTMT(nRuns, nFeatures)
 
     cbind(base, meta)
 }
 
-generateDesignTMT <- function(nRuns) {
+#' Generate Experimental Design Data for 16-TMT
+#'
+#' This function creates synthetic experimental design data for a 16-TMT experiment.
+#'
+#' @param nRuns Integer. The number of experimental runs.
+#'
+#' @return A data.frame containing the synthetic design data for 16-TMT.
+#'
+#' @keywords internal
+.generateDesignTMT <- function(nRuns) {
     .generateDesignBaseTMT(nRuns)
 }
 
+#' Generate Base Quantitative Data for 16-TMT
+#'
+#' This function generates the core quantitative data, including reporter ion intensities
+#' and feature-specific metadata, for a 16-TMT experiment.
+#'
+#' @param nRuns Integer. The number of runs in the experiment.
+#' @param nFeatures Integer. The number of features per run.
+#' @param naRate Numeric. The rate of missing data (0-1) to apply to the quantitative data.
+#'
+#' @return A data.frame containing the base quantitative data for 16-TMT.
+#'
+#' @keywords internal
 .generateQuantBaseTMT <- function(nRuns, nFeatures, naRate) {
     set.seed(123)
     totalRows <- nRuns * nFeatures
@@ -201,13 +275,16 @@ generateDesignTMT <- function(nRuns) {
     return(res)
 }
 
-# This function create filler column for the quantitative data. The goal is to
-# mimic the size of a typical rowData object in a TMT experience. We use here as
-# reference the leduc dataset. This dataset has a rowData that contains 114
-# variables. There are 85 `double`, 21 `character`, 3 `integer` and 5 `logical`.
-# We will mimic this distribution in the filler columns.
-# We generate 85 `double` columns, 21 `character` columns, 3 `integer` columns.
-
+#' Generate Additional Metadata for Quantitative Data in 16-TMT
+#'
+#' This function generates supplementary columns for the quantitative data in a 16-TMT experiment.
+#'
+#' @param nRuns Integer. The number of runs in the experiment.
+#' @param nFeatures Integer. The number of features per run.
+#'
+#' @return A data.frame containing metadata for the quantitative data in 16-TMT.
+#'
+#' @keywords internal
 .generateQuantMetaTMT <- function(nRuns, nFeatures) {
     set.seed(123)
     totalRows <- nRuns * nFeatures
@@ -232,6 +309,15 @@ generateDesignTMT <- function(nRuns) {
     return(data)
 }
 
+#' Generate Experimental Design Data for 16-TMT
+#'
+#' This function generates base columns for design data used in a 16-TMT experiment.
+#'
+#' @param nRuns Integer. The number of runs in the experiment.
+#'
+#' @return A data.frame containing the base design data for 16-TMT.
+#'
+#' @keywords internal
 .generateDesignBaseTMT <- function(nRuns) {
     set.seed(123)
     x_column <- paste0("run", rep(1:nRuns, each = 16))
@@ -248,13 +334,15 @@ generateDesignTMT <- function(nRuns) {
     )
 }
 
-# This function create filler column for the design data. The goal is to
-# mimic the size of a typical colData object in a TMT experience. We use here as
-# reference the leduc dataset. This dataset has a colData that contains 18
-# variables. There are 8 `double`, 10 `character`.
-# We will mimic this distribution in the filler columns.
-# We generate 8 `double` columns, 10 `character` columns.
-
+#' Generate Additional Metadata for Experimental Design in 16-TMT
+#'
+#' This function generates supplementary columns for the design data in a 16-TMT experiment.
+#'
+#' @param nRuns Integer. The number of runs in the experiment.
+#'
+#' @return A data.frame containing metadata for the design data in 16-TMT.
+#'
+#' @keywords internal
 .generateDesignMetaTMT <- function(nRuns) {
     set.seed(123)
     totalRows <- nRuns * 16 # 16-TMT
