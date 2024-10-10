@@ -50,18 +50,22 @@ stepPreProcessingTMT <- function(qfeatures, assays) {
 
 .filterFDRTMT <- function(qfeatures, assays) {
     qfeatures <- pep2qvalue(qfeatures,
-                     i = assays,
-                     PEP = "PEP",
-                     groupBy = "Leading.razor.protein",
-                     rowDataName = "qvalueProteins")
-    suppressMessages(filterFeatures(qfeatures,
-                          ~ qvalueProteins < 0.01))
+        i = assays,
+        PEP = "PEP",
+        groupBy = "Leading.razor.protein",
+        rowDataName = "qvalueProteins"
+    )
+    suppressMessages(filterFeatures(
+        qfeatures,
+        ~ qvalueProteins < 0.01
+    ))
 }
 
 .divideReferenceTMT <- function(qfeatures, assays) {
     qfeatures <- divideByReference(qfeatures,
-                             i = assays,
-                             colvar = "SampleType",
-                             samplePattern = ".",
-                             refPattern = "Reference")
+        i = assays,
+        colvar = "SampleType",
+        samplePattern = ".",
+        refPattern = "Reference"
+    )
 }

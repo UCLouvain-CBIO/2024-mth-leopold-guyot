@@ -9,8 +9,10 @@ profilingWrapper <- function(dataFolder, profOutPath, ...) {
     folders <- list.dirs(dataFolder, full.names = TRUE, recursive = FALSE)
     cat("Starting Workflow Profiling ...")
     pb <- progress_bar$new(
-        format = paste0("Workflow Profiling: (:percent)",
-                        " [:bar] :current/:total | Elapsed: :elapsed"),
+        format = paste0(
+            "Workflow Profiling: (:percent)",
+            " [:bar] :current/:total | Elapsed: :elapsed"
+        ),
         total = length(folders),
         clear = FALSE,
         width = 80
@@ -21,14 +23,17 @@ profilingWrapper <- function(dataFolder, profOutPath, ...) {
         designPath <- file.path(folder, "design.csv")
         quantPath <- file.path(folder, "quant.csv")
         if (file.exists(designPath) && file.exists(quantPath)) {
-            profFile <- file.path(profOutPath,
-                                  paste0(basename(folder), "_Rprof.out"))
+            profFile <- file.path(
+                profOutPath,
+                paste0(basename(folder), "_Rprof.out")
+            )
             # Start profiling and direct output to the specified file
             Rprof(profFile)
             profilingWorkflow(quantPath,
-                              designPath,
-                              runCol = "run",
-                              type = "TMT")
+                designPath,
+                runCol = "run",
+                type = "TMT"
+            )
             Rprof(NULL)
         } else {
             cat("\nMissing design.csv or quant.csv in folder:", folder, "\n")
@@ -39,10 +44,10 @@ profilingWrapper <- function(dataFolder, profOutPath, ...) {
 }
 
 profilingWorkflow <- function(quantPath,
-                              designPath,
-                              runCol,
-                              dataDIA = NULL,
-                              type) {
+    designPath,
+    runCol,
+    dataDIA = NULL,
+    type) {
     qfeatures <- stepDataImport(quantPath, designPath, runCol, dataDIA, type)
     assays <- 1:length(qfeatures)
 

@@ -1,10 +1,23 @@
 ### Replicate Data Function ###
+#' Title
+#'
+#' @param nFeaturesRange
+#' @param nRunsRange
+#' @param naRateRange
+#' @param nReplicates
+#' @param type
+#' @param folder
+#'
+#' @return
+#' @export
+#'
+#' @examples
 replicateData <- function(nFeaturesRange,
-                          nRunsRange,
-                          naRateRange,
-                          nReplicates,
-                          type,
-                          folder) {
+    nRunsRange,
+    naRateRange,
+    nReplicates,
+    type,
+    folder) {
     if (!dir.exists(folder)) {
         dir.create(folder)
     }
@@ -22,9 +35,11 @@ replicateData <- function(nFeaturesRange,
     cat("Starting", type, " Generation ...")
 
     pb <- progress_bar$new(
-        format = paste0(type,
-                        " Generation: (:percent) [:bar] ",
-                        ":current/:total | Elapsed: :elapsed"),
+        format = paste0(
+            type,
+            " Generation: (:percent) [:bar] ",
+            ":current/:total | Elapsed: :elapsed"
+        ),
         total = steps,
         clear = FALSE,
         width = 80
@@ -52,13 +67,14 @@ replicateData <- function(nFeaturesRange,
     cat("TMT Generation Finished.\n")
 }
 
-.createReplicate <- function(nFeatures,
-    nRuns,
-    naRate,
-    nReplicate,
-    type,
-    folder,
-    generateFunction) {
+.createReplicate <- function(
+        nFeatures,
+        nRuns,
+        naRate,
+        nReplicate,
+        type,
+        folder,
+        generateFunction) {
     # Define the subfolder name based on the current combination
     subfolder <- paste0(
         folder, "/",
@@ -120,7 +136,7 @@ generateDesignTMT <- function(nRuns) {
     res <- data.frame(
         PSM = paste0("PSM", rep(1:nFeatures, nRuns)),
         run = paste0("run", rep(1:nRuns, each = nFeatures)),
-        `Reporter.ion.1` = runif(totalRows,  max = 150000),
+        `Reporter.ion.1` = runif(totalRows, max = 150000),
         `Reporter.ion.2` = runif(totalRows, max = 1500),
         `Reporter.ion.3` = runif(totalRows, max = 1500),
         `Reporter.ion.4` = runif(totalRows, max = 1500),
@@ -147,12 +163,16 @@ generateDesignTMT <- function(nRuns) {
 
     # Add peptidesId
     proteinIds <- paste0("Peptide", sample(floor(0.5 * totalRows),
-                                           totalRows, replace = TRUE))
+        totalRows,
+        replace = TRUE
+    ))
     res$peptidesId <- proteinIds
 
     # Add Leading.razor.protein column
     proteinIds <- paste0("Protein", sample(floor(0.2 * totalRows),
-                                            totalRows, replace = TRUE))
+        totalRows,
+        replace = TRUE
+    ))
     res$Leading.razor.protein <- proteinIds
 
     # Add PEP column with random probabilities
@@ -160,7 +180,7 @@ generateDesignTMT <- function(nRuns) {
     # Add PIF column with random fractions
 
     pifValues <- rnorm(totalRows, mean = 0.95, sd = 0.25)
-    pifValues <- pmin(pmax(pifValues, 0), 1)  # Clip values to [0, 1]
+    pifValues <- pmin(pmax(pifValues, 0), 1) # Clip values to [0, 1]
 
     # Set 10% of PIF values to NA
     naPIF <- sample(1:totalRows, size = floor(0.1 * totalRows))
@@ -195,7 +215,9 @@ generateDesignTMT <- function(nRuns) {
     charCols <- replicate(21, sample(LETTERS, totalRows, replace = TRUE))
     intCols <- replicate(3, sample(1:100, totalRows, replace = TRUE))
     logicalCols <- replicate(5, sample(c(TRUE, FALSE),
-                                       totalRows, replace = TRUE))
+        totalRows,
+        replace = TRUE
+    ))
 
     data <- data.frame(doubleCols, charCols, intCols, logicalCols)
 
@@ -214,8 +236,10 @@ generateDesignTMT <- function(nRuns) {
     set.seed(123)
     x_column <- paste0("run", rep(1:nRuns, each = 16))
     reporter_ion_column <- rep(paste0("Reporter.ion.", 1:16), times = nRuns)
-    SampleType <- rep(c("Carrier", rep("Macrophage", 5),
-                        rep("Monocyte", 5), rep("Blank", 5)), nRuns)
+    SampleType <- rep(c(
+        "Carrier", rep("Macrophage", 5),
+        rep("Monocyte", 5), rep("Blank", 5)
+    ), nRuns)
 
     data.frame(
         runCol = x_column,
@@ -233,7 +257,7 @@ generateDesignTMT <- function(nRuns) {
 
 .generateDesignMetaTMT <- function(nRuns) {
     set.seed(123)
-    totalRows <- nRuns*16 # 16-TMT
+    totalRows <- nRuns * 16 # 16-TMT
     doubleCols <- replicate(8, rnorm(totalRows))
     charCols <- replicate(10, sample(LETTERS, totalRows, replace = TRUE))
 
