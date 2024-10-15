@@ -18,7 +18,6 @@ library(benchmarkQFeatures)
 
 ### In R
 ```r
-
 # Load the package
 library(benchmarkQFeatures)
 
@@ -41,17 +40,14 @@ library(benchmarkQFeatures)
 
 # Install scripts
 installScripts("~/dev/scripts")
-
 ```
 
 Launch script execution trough terminal
 
-```b
+```console
+~$ # without parameters
+~$ ./workflow_profiling
 
-#without parameters
-./workflow_profiling
-
-# with parameters
-./workflow_profiling "list(naRateRange = c(0.4, 0.6), nFeaturesRange = c(500, 1000), nRunsRange = c(4, 8), nReplicates = 3, outputFolder = "profilingOutput")"
-
+~$ # with parameters
+~$ ./workflow_profiling "list(naRateRange = c(0.4, 0.6), nFeaturesRange = c(500, 1000), nRunsRange = c(4, 8), nReplicates = 3, outputFolder = "profilingOutput")"
 ```
