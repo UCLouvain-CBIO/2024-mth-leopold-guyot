@@ -5,7 +5,7 @@
 \title{Execute Data Generation and Profiling Workflow}
 \usage{
 profilingExecution(
-  nFeaturesRange = c(100, 1000),
+  nFeaturesRange = c(500, 1000),
   nRunsRange = c(4, 8),
   naRateRange = c(0.4, 0.6),
   nReplicates = 1,

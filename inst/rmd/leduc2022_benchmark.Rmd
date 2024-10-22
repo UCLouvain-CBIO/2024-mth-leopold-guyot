@@ -1,0 +1,815 @@
+---
+title: "Replication of the nPOP analysis (Leduc et al. 2022) - Benchmark version"
+author:
+    - Christophe Vanderaa^[christophe.vanderaa@uclouvain.be], Computational Biology, UCLouvain
+    - Laurent Gatto, Computational Biology, UCLouvain
+output:
+    BiocStyle::html_document:
+    self_contained: yes
+toc: true
+toc_float: true
+toc_depth: 2
+code_folding: show
+date: "`r BiocStyle::doc_date()`"
+vignette: >
+    %\VignetteIndexEntry{nPOP replication}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+params:
+  qfeatures: NULL
+---
+
+```{r setup, include = FALSE}
+## Options for Rmarkdown compilation
+knitr::opts_chunk$set(fig.width = 7,
+                      fig.height = 5,
+                      fig.align = "center",
+                      out.width = "70%",
+                      message = FALSE,
+                      collapse = TRUE,
+                      crop = NULL ## Related to https://stat.ethz.ch/pipermail/bioc-devel/2020-April/016656.html
+)
+## Time the compilation
+timeStart <- Sys.time()
+```
+
+# Introduction
+
+nPOP ([Leduc et al. 2022](http://dx.doi.org/10.1101/2021.04.24.441211))
+is an upgrade of the SCoPE2 protocole ([Specht et al. 2021](http://dx.doi.org/10.1186/s13059-021-02267-5) 
+and [Petelski et al. 2021](http://dx.doi.org/10.1038/s41596-021-00616-z)), 
+where the mPOP sample preparation method is replaced by the nPOP method. nPOP processes
+samples using the Cellenion dispensing device and uses DMSO as lysis 
+reagent instead of a freeze-thaw procedure. They also include the
+prioritized data acquisition mode as described by 
+[Huffman et al. 2022](http://dx.doi.org/10.1101/2022.03.16.484655).
+
+Let's first load the replication package to make use of some helper
+functions. Those functions are only meant for this replication 
+vignette and are not designed for general use. 
+
+```{r, message = FALSE}
+library("SCP.replication")
+```
+
+### `scp` and the SCoPE2 workflow
+
+The code provided along with the article can be retrieved from
+[this GitHub repository](https://github.com/SlavovLab/nPOP).
+The objective of this vignette is to replicate the analysis script 
+while providing standardized, easy-to-read, and well documented code. 
+Therefore, our first contribution is to formalize the data processing
+into a conceptual flow chart.
+
+
+This replication vignette relies on a data framework dedicated to SCP
+data analysis that combines two Bioconductor classes 
+([Vanderaa et al. 2021](http://dx.doi.org/10.1080/14789450.2021.1988571)):
+
+- The `SingleCellExperiment` class provides an interface to many 
+cutting edge methods for single-cell analysis 
+- The `QFeatures` class facilitates manipulation and processing of
+MS-based quantitative data. 
+
+The [`scp` vignette](http://www.bioconductor.org/packages/release/bioc/vignettes/scp/inst/doc/scp.html) 
+provides detailed information about the data structure. The `scp` 
+package extends the functionality of `QFeatures` for single-cell 
+application. `scp` offers a standardized implementation for single-cell
+processing methods.
+
+The required packages for running this workflow are listed below.
+
+```{r libraries, results='hide', message=FALSE}
+## Core packages of this workflow
+library(SingleCellExperiment)
+library(scp)
+library(scpdata)
+library(limma)
+## Utility packages for data manipulation and visualization
+library(tidyverse)
+library(patchwork)
+```
+
+### Benchmark data loading
+
+
+```{r load_data}
+leduc <- params$qfeatures
+```
+
+# PSM filtering
+
+After importing the data, Leduc et al. filter low-confidence PSMs. 
+Each PSM assay contains feature meta-information that are stored
+in the assay `rowData`. The `QFeatures` package allows to quickly filter
+the rows of an assay by using these information. The available
+variables in the `rowData` are listed below for each assay.
+
+```{r rowDataNames}
+rowDataNames(leduc)
+```
+
+## Remove contaminant, noisy and low-confidence spectra
+
+We first remove spectra that are matched to contaminant proteins and 
+reverse hits. We also remove PSMs that have been matched from impure
+spectra, that are spectra containing co-eluting peptides. These are 
+identified based on the parental ion fraction (PIF), computed by 
+MaxQuant. Finally, we also want to remove PSM with poor matching 
+confidence, as defined by the false discovery rate (FDR) computed by 
+DART-ID. 
+
+We can extract the information from the `rowData` of several assays using
+the `rbindRowData` function. It takes the `rowData` of interest and
+returns a single `DataFrame` table with variables of interest. We 
+extract such a table for the different variables listed above to 
+create a quality control plot.
+
+```{r qvalue_plot, message=FALSE}
+rd <- data.frame(rbindRowData(leduc, i = names(leduc)))
+ggplot(rd) +
+    aes(x = dart_PEP) +
+    geom_histogram() +
+    geom_vline(xintercept = 0.01) +
+    ggplot(rd) +
+    aes(x = PIF) +
+    geom_histogram() +
+    geom_vline(xintercept = 0.6)
+```
+
+We next remove the PSMs that are matched to potential contaminants 
+(`Potential.contaminant` is `+` and `Proteins` starts with `CON`), 
+reverse hits (`Reverse` is `+` and `Leading.razor.protein` starts with
+`REV`), noisy spectra (`PIF` is missing or greater than 0.6) and low-confidence
+spectra with at 1% FDR threshold (`dart_qval` smaller than 0.01). We
+can perform this on our `QFeatures` object using the `filterFeatures()`
+function. The different pieces of information are directly accessed
+from the `rowData` of each assay.
+
+```{r}
+leduc <- filterFeatures(leduc, ~ Potential.contaminant != "+" &
+                            !grepl("CON", Proteins) &
+                            Reverse != "+" &
+                            !grepl("REV", Leading.razor.protein) &
+                            (is.na(PIF) | PIF > 0.6) &
+                            dart_qval < 0.01)
+```
+
+
+## Sample to carrier filter
+
+The PSMs are next filtered based on the sample to carrier ratio (SCR),
+that is the TMT ion intensity of a single-cell sample divided by
+the TMT ion intensity of the carrier (200 cell equivalent) acquired during
+the same run as the sample. It is expected that the carrier
+intensities are much higher than the single-cell intensities. We
+implemented the `computeSCR()` function that computes the SCR for each
+PSM averaged over all samples of interest in a given assay. A PSM is
+removed when the mean SCR exceeds 10 \%. To perform this, we need to
+tell the function which columns are the samples of interest and which
+column is the carrier. The `colData` of the `QFeatures` object is used 
+to define this.
+
+```{r}
+table(leduc$SampleType)
+```
+
+In this dataset, `SampleType` gives the type of sample that is present
+in each TMT channel. There 5 types of samples:
+
+- The carrier channels (`Carrier`) contain 200 cell equivalents and
+are meant to boost the peptide identification rate.
+- The normalization channels (`Reference`) are used to partially 
+correct for between-run variation.
+- The unused channels (`Unused`) are channels that are left empty due
+to isotopic cross-contamination.
+- The negative controls (`NegControl`) contain samples that do not contain any
+cell but are processed as single-cell samples.
+- The single-cell sample channels contain the single-cell samples of
+interest (`Melanoma cell` or `Monocyte`).
+
+The `computeSCR` function expects the user to provide a pattern
+(following regular expression syntax) that uniquely identifies a
+carrier channel in each run and the samples or blanks. The function
+will store the mean SCR of each feature in the `rowData` of each
+assay.
+
+```{r}
+leduc <- computeSCR(leduc, names(leduc),
+                    colvar = "SampleType", 
+                    samplePattern = "Mel|Macro",
+                    carrierPattern = "Carrier",
+                    sampleFUN = "mean",
+                    rowDataName = "MeanSCR")
+```
+
+Before applying the filter, we plot the distribution of the mean SCR.
+
+```{r message=FALSE, warning=FALSE}
+rbindRowData(leduc, i = names(leduc)) %>%
+    data.frame %>%
+    ggplot(aes(x = MeanSCR)) +
+    geom_histogram() +
+    geom_vline(xintercept = 0.1) +
+    scale_x_log10()
+```
+
+A great majority of the PSMs have a mean SCR that is lower than 10\%,
+as expected. Since the mean SCR is stored in the `rowData`, we can 
+apply `filterFeatures()` on the object to remove PSMs with high 
+average SCR.
+
+```{r}
+leduc <- filterFeatures(leduc, ~ 
+                            !is.na(MeanSCR) & !is.infinite(MeanSCR) &
+                            MeanSCR < 0.05)
+```
+
+## Filter on summed single-cell signal
+
+Finally, we remove PSM that have no signal in single-cell samples. This
+is not explicitely implemented in `scp`. To add custom information to
+`rowData`, you need to provide a list of `DataFrame`s. The name of the
+elements in the list should correspond to the names of the assays where
+the `rowData` is modified. The column names of the `DataFrame` indicate
+which variable should be modified or added (if they do not exist yet).
+So, for each assay, we compute the summed signal in single-cells (and
+negative controls) and store the results in a `DataFrame`.
+
+```{r, message=FALSE}
+sums <- lapply(names(leduc), function(i) {
+    sce <- leduc[[i]]
+    sel <- grep("Mel|Macro|Neg", colData(leduc)[colnames(sce), "SampleType"])
+    x <- assay(sce)[, sel, drop = FALSE]
+    rs <- rowSums(x, na.rm = TRUE)
+    DataFrame(ScSums = rs)
+})
+```
+
+The list of `DataFrame` is named after the corresponding assays and 
+the `rowData` of the `leduc` object is modified.
+
+```{r}
+names(sums) <- names(leduc)
+rowData(leduc) <- sums
+```
+
+To verify this new piece of data was correctly added, we plot the summed
+signal for each PSM. 
+
+```{r warning=FALSE, message=FALSE}
+rbindRowData(leduc, i = names(leduc)) %>%
+    data.frame %>%
+    ggplot(aes(x = ScSums)) +
+    geom_histogram() +
+    scale_x_log10()
+```
+
+We apply the final filter using `filterFeatures()`. 
+
+```{r}
+leduc <- filterFeatures(leduc, ~ ScSums != 0)
+```
+
+# Normalize to reference
+
+In order to partially correct for between-run variation, Leduc et al.
+compute relative reporter ion intensities. This means that
+intensities measured for single-cells are divided by the reference
+channel. We use the `divideByReference()` function that divides 
+channels of interest by the reference channel.
+Similarly to `computeSCR`, we can point to the samples and the
+reference columns in each assay using the annotation contained in the
+`colData`. We will here divide all columns (using the regular
+expression wildcard `.`) by the reference channel (`Reference`).
+
+```{r}
+leduc <- divideByReference(leduc, i = names(leduc),
+                           colvar = "SampleType", 
+                           samplePattern = ".",
+                           refPattern = "Reference")
+```
+
+Notice that when taking all samples we also include the reference
+channel itself. Hence, from now on, the reference channels will 
+contain only ones.
+
+# Aggregate PSM data to peptide data
+
+Now that the PSM assays are processed, we can aggregate them to
+peptides. This is performed using the `aggregateFeaturesOverAssays()`
+function. This is a wrapper function in `scp` that sequentially calls
+the `aggregateFeatures` from the `QFeatures` package over the
+different assays. For each assay, the function aggregates several PSMs
+into a unique peptide given an aggregating variable in the `rowData`
+(peptide sequence) and a user-supplied aggregating function (the
+median for instance). Regarding the aggregating function, the original
+analysis removes duplicated peptide sequences per run by taking the
+first non-missing value. While better alternatives are documented in
+`QFeatures::aggregateFeatures`, we still use this approach for the
+sake of replication and for illustrating that custom functions can
+be applied.
+
+```{r remove.duplicates}
+remove.duplicates <- function(x)
+    apply(x, 2, function(xx) xx[which(!is.na(xx))[1]] )
+```
+
+The aggregated peptide assays must be given a name. We here used the
+original names with `peptides_` at the start.
+
+```{r}
+peptideAssays <- paste0("peptides_", names(leduc))
+```
+
+We now have all the required information to aggregate the PSMs in the
+different batches to peptides.
+
+```{r}
+leduc <- aggregateFeaturesOverAssays(leduc,
+                                     i = names(leduc),
+                                     fcol = "modseq",
+                                     name = peptideAssays,
+                                     fun = remove.duplicates)
+```
+
+Under the hood, the `QFeatures` architecture preserves the
+relationship between the aggregated assays. See `?AssayLinks` for more
+information on relationships between assays. Notice that
+`aggregateFeaturesOverAssays` created as many new assays as the number
+of supplied assays.
+
+```{r}
+leduc
+```
+
+# Join assays 
+
+Up to now, we kept the data belonging to each MS run in separate
+assays. We now combine all batches into a single assay. This can
+easily be done using the `joinAssays()` function from the `QFeatures`
+package.
+
+## Consensus mapping of peptides to proteins
+
+We need to account for an issue in the data. `joinAssays()` will only
+keep the metadata variables that have the same value between matching
+rows. However, some peptide sequences map to one protein in one run
+and to another protein in another run. Hence, the protein sequence is
+not constant for all peptides and is removed during joining. It is
+important we keep the protein sequence in the `rowData` since we will
+later need it to aggregate peptides to proteins. To avoid this issue,
+we replace the problematic peptides to protein mappings through a
+majority vote.
+
+```{r}
+## Generate a list of DataFrames with the information to modify
+rbindRowData(leduc, i = grep("^pep", names(leduc))) %>%
+    data.frame %>%
+    group_by(modseq) %>%
+    ## The majority vote happens here
+    mutate(Leading.razor.protein.symbol =
+               names(sort(table(Leading.razor.protein),
+                          decreasing = TRUE))[1]) %>%
+    select(modseq, Leading.razor.protein.symbol) %>%
+    filter(!duplicated(modseq, Leading.razor.protein.symbol)) ->
+    ppMap
+consensus <- lapply(peptideAssays, function(i) {
+    ind <- match(rowData(leduc[[i]])$modseq, ppMap$modseq)
+    DataFrame(Leading.razor.protein.symbol =
+                  ppMap$Leading.razor.protein.symbol[ind])
+})
+## Name the list
+names(consensus) <- peptideAssays
+## Modify the rowData
+rowData(leduc) <- consensus
+```
+
+## Cleaning missing data
+
+Another important step before we join the assays is to replace zero 
+and infinite values by `NA`s. The zeros can be biological zeros or 
+technical zeros and differentiating between the two types is a 
+difficult task, they are therefore better considered as missing. The 
+infinite values arose during the normalization by the reference because
+the channel values are divide by a zero from the reference channel.
+This artefact could easily be avoided if we had replace the zeros by
+`NA`s at the beginning of the workflow, what we strongly recommend for
+future analyses.
+
+The `infIsNA()` and the `zeroIsNA()` functions automatically detect
+infinite and zero values, respectively, and replace them with `NA`s.
+Those two functions are provided by the `QFeatures` package.
+
+```{r}
+leduc <- infIsNA(leduc, i = peptideAssays)
+leduc <- zeroIsNA(leduc, i = peptideAssays)
+```
+
+## Join assays
+
+Now that the peptides are correctly matched to proteins and missing
+values are correctly formatted, we can join the assays.
+
+```{r join_assays}
+leduc <- joinAssays(leduc,
+                    i = peptideAssays,
+                    name = "peptides")
+```
+
+`joinAssays` has created a new assay called `peptides` that combines
+the previously aggregated peptide assays.
+
+```{r overview3}
+leduc
+```
+
+# Filter single-cells based on median CV
+
+Leduc et al. proceed with filtering the single-cells. The
+filtering is mainly based on the median coefficient of variation (CV)
+per cell. The median CV measures the consistency of quantification for
+a group of peptides that belong to a protein. We remove cells that
+exhibit high median CV over the different proteins. We compute the
+median CV per cell using the `medianCVperCell()` function from the `scp`
+package. The function takes the protein information from the `rowData`
+of the assays that will tell how to group the features (peptides) when
+computing the CV. Note that we supply the peptide assays before
+joining in a single assays (`i = peptideAssays`). This is because
+SCoPE2 performs a custom normalization (`norm = "SCoPE2"`). Each row
+in an assay is normalized by a scaling factor. This scaling factor is
+the row mean after dividing the columns by the median. The authors
+retained CVs that are computed using at least 3 peptides (`nobs = 3`).
+
+```{r compute_medianCV}
+leduc <- medianCVperCell(leduc,
+                         i = peptideAssays,
+                         groupBy = "Leading.razor.protein.symbol",
+                         nobs = 3,
+                         na.rm = TRUE,
+                         colDataName = "MedianCV",
+                         norm = "SCoPE2")
+```
+
+The computed CVs are stored in the `colData`. We can now filter cells
+that have reliable quantifications. The negative controls are not expected
+to have reliable quantifications and hence can be used to estimate a
+null distribution of the CV. This distribution helps defining a
+threshold that filters out single-cells that contain noisy 
+quantification.
+
+```{r}
+colData(leduc) %>% 
+    data.frame %>% 
+    filter(grepl("Mono|Mel|Neg", SampleType)) %>% 
+    mutate(control = ifelse(grepl("Neg", SampleType), "ctl", "sc")) %>% 
+    ggplot() +
+    aes(x = MedianCV,
+        fill = control) + 
+    geom_density(alpha = 0.5, adjust = 1) +
+    geom_vline(xintercept = 0.42) +
+    xlim(0.2, 0.8) +
+    theme_minimal() +
+    scale_fill_manual(values = c( "black", "purple2")) + 
+    xlab("Quantification variability") + 
+    ylab("Fraction of cells")
+```
+
+We can see that the protein quantification for single-cells are much 
+more consistent within single-cell channels than within blank channels.
+A threshold of 0.42 best separates single-cells from empty channels.
+
+We keep the cells that pass the median CV threshold. Furthermore, we
+keep melanoma cells and monocytes as those represent the samples of
+interest. We can extract the sample names that pass the CV and sample
+type filters using the `subsetByColData()` function. 
+
+```{r}
+leduc <- 
+    subsetByColData(leduc,
+                    !is.na(leduc$MedianCV) &
+                        leduc$MedianCV < 0.42 &
+                        grepl("Mono|Mel", leduc$SampleType))
+```
+
+
+# Normalization
+
+The columns (samples) then the rows (peptides) are normalized by 
+dividing the relative intensities by the median relative intensities.
+The column normalization is implemented as the `normalize()` function
+with the argument `method = div.median`. The row normalization is not
+available from `normalizet()`, but is easily performed using the 
+`sweep` function from the `QFeatures` package that is inspired from 
+the `base::sweep` function. 
+
+```{r}
+## Scale column with median
+leduc <- normalize(leduc,
+                   i = "peptides",
+                   method = "div.median",
+                   name = "peptides_norm1")
+## Scale rows with median
+leduc <- sweep(leduc,
+               i = "peptides_norm1",
+               name = "peptides_norm2",
+               MARGIN = 1,
+               FUN = "/",
+               STATS = rowMedians(assay(leduc[["peptides_norm1"]]),
+                                  na.rm = TRUE))
+```
+
+Each normalization step is stored in a separate assay. An important
+aspect to note here is that
+
+# Missing data filtering
+
+Peptides that contain many missing values are not informative. 
+Therefore, the authors remove those with more than 99 \% missing data.
+This is done using the `filterNA()` function from `QFeatures`.
+
+```{r}
+leduc <- filterNA(leduc,
+                  i = "peptides_norm2",
+                  pNA = 0.99)
+```
+
+They also remove cells with more than 99 \% missing data. This is 
+performed by first computing the amount of missing data in the assay
+using `nNA()`. We then subset the cells that meet the criterion. 
+
+```{r}
+nnaRes <- nNA(leduc, "peptides_norm2")
+sel <- nnaRes$nNAcols$pNA < 99
+leduc[["peptides_norm2"]] <- leduc[["peptides_norm2"]][, sel]
+```
+
+# Log-transformation
+
+Peptide data is log2-transformed before aggregating to proteins. This
+is performed by the `logTransform()` function from `QFeatures`.
+
+```{r}
+leduc <- logTransform(leduc,
+                      base = 2,
+                      i = "peptides_norm2",
+                      name = "peptides_log")
+```
+
+
+# Aggregate peptide data to protein data
+
+Similarly to aggregating PSM data to peptide data, we can aggregate 
+peptide data to protein data using the `aggregateFeatures` function. 
+Note that we here use the median as a summarizing function.
+
+```{r, message=FALSE, warning=FALSE}
+leduc <- aggregateFeatures(leduc,
+                           i = "peptides_log",
+                           name = "proteins",
+                           fcol = "Leading.razor.protein.symbol",
+                           fun = matrixStats::colMedians, 
+                           na.rm = TRUE)
+```
+
+# Normalization
+
+Normalization is performed similarly to peptide normalization. We use
+the same functions, but since the data were log-transformed at the
+peptide level, we subtract by the median instead of dividing.
+
+```{r}
+## Center columns with median
+leduc <- normalize(leduc,
+                   i = "proteins",
+                   method = "center.median",
+                   name = "proteins_norm1")
+## Scale rows with median
+leduc <- sweep(leduc,
+               i = "proteins_norm1",
+               name = "proteins_norm2",
+               MARGIN = 1,
+               FUN = "-",
+               STATS = rowMedians(assay(leduc[["proteins_norm1"]]),
+                                  na.rm = TRUE))
+```
+
+# Imputation
+
+The protein data is majorily composed of missing values. The graph below shows the
+distribution of the proportion missingness in cells. Cells contain on average
+65 \% missing values. 
+
+```{r missing_plot, message=FALSE}
+data.frame(pNA = nNA(leduc, "proteins_norm2")$nNAcols$pNA) %>%
+    ggplot(aes(x = pNA)) +
+    geom_histogram() +
+    xlab("Percentage missingnes per cell")
+```
+
+The missing data is imputed using K nearest neighbors. The authors run
+KNN with k = 3. We made a wrapper around the author's code to apply
+imputation to our `QFeatures` object.
+
+```{r}
+leduc <- imputeKnnSCoPE2(leduc,
+                         i = "proteins_norm2",
+                         name = "proteins_impd",
+                         k = 3)
+```
+
+`QFeatures` provides the `impute` function that serves as an interface
+to different imputation algorithms among which the KNN algorithm from
+`impute::impute.knn`. However, the KNN implementation in the oringal analysis and in 
+`impute.knn` are different.  Leduc et al. perform KNN imputation in the 
+sample space, meaning that data from neighbouring cells are used to 
+impute the central cell, whereas `impute::impute.knn` performs KNN 
+imputation in the feature space, meaning that data from neighbouring 
+features are used to impute the missing values from the central 
+features. We provide the code for KNN imputation with `QFeatures` but
+do not run in order to replicate the original analysis.
+
+```{r, eval = FALSE}
+leduc <- impute(leduc,
+                i = "proteins_norm2",
+                method = "knn",
+                k = 3, rowmax = 1, colmax= 1,
+                maxp = Inf, rng.seed = 1234)
+```
+
+# Batch correction
+
+The next step is to correct for the remaining batch effects.
+The data were acquired as a series of MS runs. Recall we had 134
+assays at the beginning of the workflow. Each MS run can be subjected
+to technical perturbations that lead to differences in the data. Furthermore, 
+TMT labeling can also influence the quantification. These effects
+must be accounted for to avoid attributing biological effects to 
+technical effects. The `limma` algorithm (CITE-Ritchie) is used by 
+Leduc et al. to correct for batch effects. It can take up to 2
+batch variables, in this case the  MS acquisition batch and the TMT channel,
+while protecting for variables of interest, the sample type in this case. All the 
+information is contained in the `colData` of the `QFeatures` object.
+We first extract the assays with the associated `colData`.
+
+```{r}
+sce <- getWithColData(leduc, "proteins_impd")
+```
+
+We next create the design matrix. We then perform the batch correction
+and overwrite the data matrix. Recall the 
+data matrix can be accessed using the `assay` function. 
+
+```{r}
+model <- model.matrix(~ SampleType, data = colData(sce))
+assay(sce) <- removeBatchEffect(x = assay(sce),
+                                batch = sce$lcbatch,
+                                batch2 = sce$Channel,
+                                design = model)
+```
+
+Finally, we add the batch corrected assay to the `QFeatures` object
+and create the feature links.
+
+```{r}
+leduc <- addAssay(leduc, y = sce, name = "proteins_batchC")
+leduc <- addAssayLinkOneToOne(leduc, from = "proteins_impd",
+                              to = "proteins_batchC")
+```
+
+# Normalization 
+
+The very last step of the data processing workflow is a new round of
+normalization.
+
+```{r}
+## Center columns with median
+leduc <- normalize(leduc,
+                   i = "proteins_batchC",
+                   method = "center.median",
+                   name = "proteins_batchC_norm1")
+## Scale rows with median
+leduc <- sweep(leduc,
+               i = "proteins_batchC_norm1",
+               name = "proteins_processed",
+               MARGIN = 1,
+               FUN = "-",
+               STATS = rowMedians(assay(leduc[["proteins_batchC_norm1"]]),
+                                  na.rm = TRUE))
+```
+
+# PCA 
+
+We run the same PCA procedure as performed by the authors, that is a
+weighted PCA where the weight for a protein is defined as the summed
+correlation with the other proteins.
+
+```{r}
+sce <- getWithColData(leduc, "proteins_processed")
+pcaRes <- pcaSCoPE2(sce)
+## Compute percent explained variance
+pcaPercentVar <- round(pcaRes$values[1:2] / sum(pcaRes$values) * 100)
+## Plot PCA
+data.frame(PC = pcaRes$vectors[, 1:2],
+           colData(sce)) %>%
+    ggplot() +
+    aes(x = PC.1, 
+        y = PC.2, 
+        colour = SampleType) +
+    geom_point(alpha = 0.5) +
+    xlab(paste0("PC1 (", pcaPercentVar[1], "%)")) +
+    ylab(paste0("PC2 (", pcaPercentVar[2], "%)"))+
+    ggtitle("PCA on scp processed protein data")
+```
+
+The PCA plot is very similar to the published PCA plot.
+
+```{r}
+pcaResLeduc <- pcaSCoPE2(proteins_processed_leduc)
+## Compute percent explained variance
+pcaPercentVar <- round(pcaResLeduc$values[1:2] / sum(pcaResLeduc$values) * 100)
+## Plot PCA
+data.frame(PC = pcaResLeduc$vectors[, 1:2],
+           colData(proteins_processed_leduc)) %>%
+    ggplot() +
+    aes(x = PC.1, 
+        y = PC.2, 
+        colour = SampleType) +
+    geom_point(alpha = 0.5) +
+    xlab(paste0("PC1 (", pcaPercentVar[1], "%)")) +
+    ylab(paste0("PC2 (", pcaPercentVar[2], "%)")) +
+    ggtitle("PCA on processed protein data by Leduc et al.")
+```
+
+Here again we can see the replicated PCA from this vignette is very 
+similar to the PCA published by the authors. 
+
+Using standard PCA, we obtain the same cell patterns although the 
+explained variance differs. 
+
+```{r}
+library(scater)
+## Perform PCA, see ?runPCA for more info about arguments
+runPCA(sce, ncomponents = 50,
+       ntop = Inf,
+       scale = TRUE,
+       exprs_values = 1,
+       name = "PCA") %>%
+    ## Plotting is performed in a single line of code
+    plotPCA(colour_by = "SampleType")
+```
+
+# Conclusion 
+
+In this vignette, we have demonstrated that the `scp` package is able
+to accurately reproduce the analysis published by Leduc et al. We not only 
+support the reliability of the published work, but we also offer a
+formalization and standardization of the pipeline by means of 
+easy-to-read and highly documented code. This workflow can serve as a
+starting ground to improve upon the current methods and to design new
+modelling tools dedicated to single-cell proteomics. 
+
+# Requirements
+
+### Hardware and software
+
+The system details of the machine that built the vignette are:
+
+```{r, echo = FALSE, message = FALSE}
+sd <- benchmarkme::get_sys_details()
+cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
+    "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
+    " (svn: ", sd$r_version$`svn rev`, ")\n",
+    "RAM: ", round(sd$ram / 1E9, 1), " GB\n",
+    "CPU: ", sd$cpu$no_of_cores, " core(s) - ", sd$cpu$model_name, "\n",
+    sep = "")
+```
+
+### Timing
+
+The total time required to compile this vignette is:
+
+```{r, echo = FALSE}
+timing <- Sys.time() - timeStart
+cat(timing[[1]], attr(timing, "units"))
+```
+### Memory
+
+The final `leduc` object size is:
+
+```{r, echo = FALSE}
+format(object.size(leduc), units = "GB")
+```
+### Session info
+
+```{r}
+sessionInfo()
+```
+
+# Licence
+
+This vignette is distributed under a 
+[CC BY-SA licence](https://creativecommons.org/licenses/by-sa/2.0/) 
+licence.
+
+# Reference
