@@ -42,6 +42,7 @@ renderBenchmarking <- function(qfeaturesObject, nCell) {
 #'
 #' @return qfeatures
 #' @import scp
+#' @import SingleCellExperiment
 #'
 leduc2022Generate <- function(base, nCell) {
     base <- base[, , -(135:138)]
@@ -65,20 +66,22 @@ leduc2022Generate <- function(base, nCell) {
         colnames(newAssay) <- newSampleNames
         rownames(newAssay) <- newFeaturesNames
 
-        noise <- matrix(rnorm(n = length(newAssay), mean = 0, sd = 5),
+        noise <- pmin(matrix(rnorm(n = length(newAssay), mean = 0, sd = 5),
                         nrow = nrow(newAssay),
-                        ncol = ncol(newAssay))
+                        ncol = ncol(newAssay)), 0)
         noisyNewAssay <- newAssay + noise
 
         newColData <- colData(original_se)
         newColData$Set <- paste0("run_", i)
+        newColData$Channel <- as.character(newColData$Channel)
+        newColData$IsolationTimeStamp <- as.character(newColData$IsolationTimeStamp)
         rownames(newColData) <- newSampleNames
 
         newRowData <- rowData(original_se)
         rownames(newRowData) <- newFeaturesNames
 
         psmCounter <- psmCounter + nrow(newRowData)
-        noisy_se <- SummarizedExperiment(assays = list(noisyNewAssay),
+        noisy_se <- SingleCellExperiment(assays = list(noisyNewAssay),
                                          rowData = newRowData,
                                          colData = newColData)
         new_qfeatures <- addAssay(new_qfeatures, noisy_se, name = paste0("run_", i))

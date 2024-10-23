@@ -15,7 +15,8 @@ Imports:
     utils,
     matrixStats,
     progress,
-    rmarkdown
+    rmarkdown,
+    SingleCellExperiment
 Depends:
     R (>= 4.4.1)
 Roxygen: list(markdown = TRUE)

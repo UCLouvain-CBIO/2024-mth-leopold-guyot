@@ -722,27 +722,7 @@ data.frame(PC = pcaRes$vectors[, 1:2],
     ggtitle("PCA on scp processed protein data")
 ```
 
-The PCA plot is very similar to the published PCA plot.
 
-```{r}
-pcaResLeduc <- pcaSCoPE2(proteins_processed_leduc)
-## Compute percent explained variance
-pcaPercentVar <- round(pcaResLeduc$values[1:2] / sum(pcaResLeduc$values) * 100)
-## Plot PCA
-data.frame(PC = pcaResLeduc$vectors[, 1:2],
-           colData(proteins_processed_leduc)) %>%
-    ggplot() +
-    aes(x = PC.1, 
-        y = PC.2, 
-        colour = SampleType) +
-    geom_point(alpha = 0.5) +
-    xlab(paste0("PC1 (", pcaPercentVar[1], "%)")) +
-    ylab(paste0("PC2 (", pcaPercentVar[2], "%)")) +
-    ggtitle("PCA on processed protein data by Leduc et al.")
-```
-
-Here again we can see the replicated PCA from this vignette is very 
-similar to the PCA published by the authors. 
 
 Using standard PCA, we obtain the same cell patterns although the 
 explained variance differs. 
