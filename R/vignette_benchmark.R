@@ -1,49 +1,27 @@
-#' leduc2022 vignette benchmarking
-#'
-#' @param nCellRange range of number of cells to benchmark
-#'
-#' @return results
-#'
-#' @importFrom scpdata leduc2022
-#' @export
-#'
-leduc2022Benchmark <- function(nCellRange) {
-    results <- list()
-    baseLeduc <- leduc2022()
-    for (nCell in nCellRange) {
-        qfeatures <- leduc2022Generate(baseLeduc, nCell)
-        result <- renderBenchmarking(qfeatures, nCell)
-        results[[as.character(nCell)]] <- result
-    }
-    return(results)
+library(peakRAM)
+library(scpdata)
+library(scp)
+library(SingleCellExperiment)
+library(bench)
+
+source("R/vignette_leduc2022_script.R")
+
+leduc2022Benchmark <- function(nCellRange, rep) {
+    base <- scpdata::leduc2022()
+    press(
+        nCell = nCellRange,
+        rep = rep,
+        {
+            set.seed(123)
+            print0("Starting generation of data for ",
+                   nCell,
+                   " Cellules...")
+            qfeatures <- leduc2022Generate(base, nCell)
+            bench::mark(leduc2022script(qfeatures), memory = TRUE)
+        }
+    )
 }
 
-#' Title
-#'
-#' @param qfeaturesObject qfeatures object
-#' @param nCell number of cells
-#'
-#' @return time
-#' @importFrom rmarkdown render
-renderBenchmarking <- function(qfeaturesObject, nCell) {
-    rmdPath <- system.file("rmd/leduc2022_benchmark.Rmd",
-                       package = "benchmarkQFeatures")
-    start <- Sys.time()
-    rmarkdown::render(rmdPath,
-                      output_file = paste0(nCell,"_leduc2022_benchmark.html"),
-                      params = list(qfeatures = qfeaturesObject))
-    end <- Sys.time()
-    return(end - start)
-}
-
-#' Generate leduc2022 data
-#'
-#' @param nCell number of cells to generate
-#'
-#' @return qfeatures
-#' @import scp
-#' @import SingleCellExperiment
-#'
 leduc2022Generate <- function(base, nCell) {
     base <- base[, , -(135:138)]
     nRun <- nCell %/% 18
@@ -88,3 +66,11 @@ leduc2022Generate <- function(base, nCell) {
     }
     return(new_qfeatures)
 }
+
+sd <- benchmarkme::get_sys_details()
+cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
+    "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
+    " (svn: ", sd$r_version$`svn rev`, ")\n",
+    "RAM: ", round(sd$ram / 1E9, 1), " GB\n",
+    "CPU: ", sd$cpu$no_of_cores, " core(s) - ", sd$cpu$model_name, "\n",
+    sep = "")

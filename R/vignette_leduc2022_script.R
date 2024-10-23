@@ -5,6 +5,8 @@ library(SingleCellExperiment)
 library(scp)
 library(scpdata)
 library(limma)
+#library(scater)
+
 ## Utility packages for data manipulation and visualization
 library(tidyverse)
 library(patchwork)
@@ -161,7 +163,7 @@ leduc2022script <- function(leduc){
 
 
     ## Scale column with median
-    leduc <- normalize(leduc,
+    leduc <- QFeatures::normalize(leduc,
                        i = "peptides",
                        method = "div.median",
                        name = "peptides_norm1")
@@ -202,7 +204,7 @@ leduc2022script <- function(leduc){
     # Normalization
 
     ## Center columns with median
-    leduc <- normalize(leduc,
+    leduc <- QFeatures::normalize(leduc,
                        i = "proteins",
                        method = "center.median",
                        name = "proteins_norm1")
@@ -251,7 +253,7 @@ leduc2022script <- function(leduc){
     # Normalization
 
     ## Center columns with median
-    leduc <- normalize(leduc,
+    leduc <- QFeatures::normalize(leduc,
                        i = "proteins_batchC",
                        method = "center.median",
                        name = "proteins_batchC_norm1")
@@ -266,48 +268,14 @@ leduc2022script <- function(leduc){
 
     # PCA
 
-    sce <- getWithColData(leduc, "proteins_processed")
-    pcaRes <- pcaSCoPE2(sce)
-    ## Compute percent explained variance
-    pcaPercentVar <- round(pcaRes$values[1:2] / sum(pcaRes$values) * 100)
-    ## Plot PCA
-    data.frame(PC = pcaRes$vectors[, 1:2],
-               colData(sce)) %>%
-        ggplot() +
-        aes(x = PC.1,
-            y = PC.2,
-            colour = SampleType) +
-        geom_point(alpha = 0.5) +
-        xlab(paste0("PC1 (", pcaPercentVar[1], "%)")) +
-        ylab(paste0("PC2 (", pcaPercentVar[2], "%)"))+
-        ggtitle("PCA on scp processed protein data")
-
-    library(scater)
     ## Perform PCA, see ?runPCA for more info about arguments
-    runPCA(sce, ncomponents = 50,
-           ntop = Inf,
-           scale = TRUE,
-           exprs_values = 1,
-           name = "PCA") %>%
-        ## Plotting is performed in a single line of code
-        plotPCA(colour_by = "SampleType")
+    # runPCA(sce, ncomponents = 50,
+    #        ntop = Inf,
+    #        scale = TRUE,
+    #        exprs_values = 1,
+    #        name = "PCA") %>%
+    #     ## Plotting is performed in a single line of code
+    #     plotPCA(colour_by = "SampleType")
+
+    return(object.size(leduc), units = "GB")
 }
-
-
-
-sd <- benchmarkme::get_sys_details()
-cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
-    "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
-    " (svn: ", sd$r_version$`svn rev`, ")\n",
-    "RAM: ", round(sd$ram / 1E9, 1), " GB\n",
-    "CPU: ", sd$cpu$no_of_cores, " core(s) - ", sd$cpu$model_name, "\n",
-    sep = "")
-
-### Timing
-
-timing <- Sys.time() - timeStart
-cat(timing[[1]], attr(timing, "units"))
-
-### Memory
-
-format(object.size(leduc), units = "GB")
