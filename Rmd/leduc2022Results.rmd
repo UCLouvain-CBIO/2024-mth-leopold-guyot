@@ -15,6 +15,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r packages}
 library(tidyverse)
+library(benchmarkme)
+library(plotly)
+library(treemapify)
 ```
 
 ## Result pre-processing
@@ -25,7 +28,12 @@ objectSize$nCell <- as.factor(objectSize$nCell)
 objectSize$rep <- as.factor(objectSize$rep)
 
 dataFrames <- lapply(list.files(path = params$memoryUsageInputDir, full.names = TRUE),
-       function(x) read.csv(x))
+       function(x){
+            df <- read.csv(x)
+            total_time <- sum(df$Elapsed_Time_sec, na.rm = TRUE)
+            df %>% 
+                mutate(ratioTime = Elapsed_Time_sec / total_time)
+       })
 names(dataFrames) <- list.files(path = params$memoryUsageInputDir, full.names = FALSE)
 names(dataFrames) <- gsub(pattern = ".csv", replacement = "", x = names(dataFrames))
 print(names(dataFrames))
@@ -36,7 +44,8 @@ benchmarkDF <- separate_wider_delim(data = benchmarkDF, cols = c("run"), delim =
 benchmarkDF$vignette_step <- gsub(pattern = "(.*leduc)(.*)([.,/(]leduc.*)",
                                   replacement = "\\2",
                                   x = benchmarkDF$Function_Call)
-irrelevantIndices <- grep("write.table", benchmarkDF$vignette_step)
+irrelevantIndices <- c(grep("write.table", benchmarkDF$vignette_step),
+                       grep("assaysNames", benchmarkDF$vignette_step))
 benchmarkDF <- benchmarkDF[-irrelevantIndices,]
 ```
 
@@ -44,33 +53,51 @@ benchmarkDF <- benchmarkDF[-irrelevantIndices,]
 ## Difference in final object size
 
 ```{r objectSizeComparaison}
-objectSize %>%
+plotSize <- objectSize %>%
     group_by(nCell) %>%
     summarise("sizeGB" = utils:::format.object_size(mean(size),
                                                        units = "GB")) %>%
-    ggplot(aes(x = nCell, y = sizeGB)) + geom_col()
+    ggplot(aes(x = nCell, y = sizeGB, fill = nCell)) + geom_col()
+ggplotly(plotSize)
 ```
 
 ## Difference in total run time
 
 ```{r timeBenchmark}
-benchmarkDF %>%
+plotTime <- benchmarkDF %>%
     group_by(nCell, replicate) %>%
     summarise("time" = sum(Elapsed_Time_sec)) %>%
-    ggplot(aes(x = nCell, y = time)) + geom_boxplot()
+    ggplot(aes(x = nCell, y = time, color = nCell)) + geom_boxplot()
+ggplotly(plotTime)
 ```
 
 
 ## Difference in peak RAM usage
 
 ```{r peakBenchmark}
-benchmarkDF %>%
+plotPeak <- benchmarkDF %>%
     group_by(nCell, replicate) %>%
     summarise("peak" = max(Peak_RAM_Used_MiB)) %>%
-    ggplot(aes(x = nCell, y = peak)) + geom_boxplot()
+    group_by(nCell) %>% 
+    summarise("peak" = mean(peak)) %>% 
+    ggplot(aes(x = nCell, y = peak, fill = nCell)) + geom_col()
+ggplotly(plotPeak)
 ```
 
-```{r propBenchmark}
+```{r ratioBenchmark}
+plotRatio <- benchmarkDF %>%
+    group_by(vignette_step) %>%
+    summarise(meanTimePercentage = mean(ratioTime)*100) %>%
+    arrange(desc(meanTimePercentage)) %>%  # Sort by meanTimePercentage
+    mutate(vignette_step = factor(vignette_step, levels = vignette_step)) %>%  # Reorder factor levels
+    ggplot(aes(x = vignette_step, y = meanTimePercentage, fill = vignette_step)) +
+        geom_bar(stat = "identity") +  # Bar segments
+        labs(title = "Proportion of vignette_step by meanTimePercentage",
+             y = "Percentage of time taken (average)", x = "Vignette Step") +  # Axis labels
+        theme_minimal() +  # Minimal theme for cleaner look
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+ggplotly(plotRatio)
+
 
 
 ```
