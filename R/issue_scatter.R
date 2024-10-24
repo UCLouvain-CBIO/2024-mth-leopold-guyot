@@ -30,3 +30,4 @@ test3 <- QFeatures::normalize(scp1,
                               i = "peptides",
                               method = "div.median",
                               name = "peptides_norm1")
+#

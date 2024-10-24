@@ -12,6 +12,48 @@ library(tidyverse)
 library(patchwork)
 
 leduc2022script <- function(leduc){
+    assaysNames <- names(leduc)
+    # Remove contaminant, noisy and low-confidence spectra
+    leduc <- leducFilterFeatures(leduc)
+    # Sample to carrier filter
+    leduc <- leducSCR(leduc)
+    # Filter on summed single-cell signal
+    leduc <- leducScSums(leduc)
+    # Normalize to reference
+    leduc <- leducNormToRef(leduc)
+    # Aggregate PSM data to peptide data
+    leduc <- leducAggPSM(leduc)
+    # Consensus mapping of peptides to proteins
+    leduc <- leducConsensus(leduc, assaysNames)
+    # Cleaning missing data
+    leduc <- leducMissingData(leduc, assaysNames)
+    # Join assays
+    leduc <- leducJoin(leduc, assaysNames)
+    # Filter single-cells based on median CV
+    leduc <- leducFilterCV(leduc, assaysNames)
+    # Normalization peptides
+    leduc <- leducNormPep(leduc)
+    # Missing data filtering
+    leduc <- leducFilteringNA(leduc)
+    # Log-transformation
+    leduc <- leducLogTransfo(leduc)
+    # Aggregate peptide data to protein data
+    leduc <- leducAggPep(leduc)
+    # Normalization proteins
+    leduc <- leducNormPro(leduc)
+    # Imputation
+    leduc <- leducImpute(leduc)
+    # Batch correction
+    leduc <- leducBatch(leduc)
+    # Normalization batch corrected proteins
+    leduc <- leducNormBatch(leduc)
+    # PCA
+    #leduc <- leducPCA(leduc)
+
+    return(object.size(leduc))
+}
+
+leducFilterFeatures <- function(leduc){
     rowDataNames(leduc)
 
 
@@ -25,13 +67,15 @@ leduc2022script <- function(leduc){
         geom_histogram() +
         geom_vline(xintercept = 0.6)
 
-    leduc <- filterFeatures(leduc, ~ Potential.contaminant != "+" &
-                                !grepl("CON", Proteins) &
-                                Reverse != "+" &
-                                !grepl("REV", Leading.razor.protein) &
-                                (is.na(PIF) | PIF > 0.6) &
-                                dart_qval < 0.01)
+    filterFeatures(leduc, ~ Potential.contaminant != "+" &
+                        !grepl("CON", Proteins) &
+                        Reverse != "+" &
+                        !grepl("REV", Leading.razor.protein) &
+                        (is.na(PIF) | PIF > 0.6) &
+                        dart_qval < 0.01)
+}
 
+leducSCR <- function(leduc){
     table(leduc$SampleType)
 
     leduc <- computeSCR(leduc, names(leduc),
@@ -48,10 +92,12 @@ leduc2022script <- function(leduc){
         geom_vline(xintercept = 0.1) +
         scale_x_log10()
 
-    leduc <- filterFeatures(leduc, ~
-                                !is.na(MeanSCR) & !is.infinite(MeanSCR) &
-                                MeanSCR < 0.05)
+    filterFeatures(leduc, ~
+                        !is.na(MeanSCR) & !is.infinite(MeanSCR) &
+                        MeanSCR < 0.05)
+}
 
+leducScSums <- function(leduc){
     sums <- lapply(names(leduc), function(i) {
         sce <- leduc[[i]]
         sel <- grep("Mel|Macro|Neg", colData(leduc)[colnames(sce), "SampleType"])
@@ -69,14 +115,17 @@ leduc2022script <- function(leduc){
         geom_histogram() +
         scale_x_log10()
 
-    leduc <- filterFeatures(leduc, ~ ScSums != 0)
+    filterFeatures(leduc, ~ ScSums != 0)
+}
 
+leducNormToRef <- function(leduc){
+    divideByReference(leduc, i = names(leduc),
+                           colvar = "SampleType",
+                           samplePattern = ".",
+                           refPattern = "Reference")
+}
 
-    leduc <- divideByReference(leduc, i = names(leduc),
-                               colvar = "SampleType",
-                               samplePattern = ".",
-                               refPattern = "Reference")
-
+leducAggPSM <- function(leduc){
     remove.duplicates <- function(x)
         apply(x, 2, function(xx) xx[which(!is.na(xx))[1]] )
 
@@ -91,6 +140,10 @@ leduc2022script <- function(leduc){
                                          fun = remove.duplicates)
 
     leduc
+}
+
+leducConsensus <- function(leduc, assaysNames){
+    peptideAssays <- paste0("peptides_", assaysNames)
 
     ## Generate a list of DataFrames with the information to modify
     rbindRowData(leduc, i = grep("^pep", names(leduc))) %>%
@@ -113,21 +166,29 @@ leduc2022script <- function(leduc){
     ## Modify the rowData
     rowData(leduc) <- consensus
 
-    ## Cleaning missing data
+    leduc
+}
+
+leducMissingData <- function(leduc, assaysNames){
+    peptideAssays <- paste0("peptides_", assaysNames)
 
     leduc <- infIsNA(leduc, i = peptideAssays)
-    leduc <- zeroIsNA(leduc, i = peptideAssays)
+    zeroIsNA(leduc, i = peptideAssays)
 
-    ## Join assays
+}
+
+leducJoin <- function(leduc, assaysNames){
+    peptideAssays <- paste0("peptides_", assaysNames)
 
     leduc <- joinAssays(leduc,
                         i = peptideAssays,
                         name = "peptides")
 
     leduc
+}
 
-    # Filter single-cells based on median CV
-
+leducFilterCV <- function(leduc, assaysNames){
+    peptideAssays <- paste0("peptides_", assaysNames)
 
     leduc <- medianCVperCell(leduc,
                              i = peptideAssays,
@@ -152,30 +213,30 @@ leduc2022script <- function(leduc){
         xlab("Quantification variability") +
         ylab("Fraction of cells")
 
-    leduc <-
-        subsetByColData(leduc,
-                        !is.na(leduc$MedianCV) &
-                            leduc$MedianCV < 0.42 &
-                            grepl("Mono|Mel", leduc$SampleType))
 
+    subsetByColData(leduc,
+                    !is.na(leduc$MedianCV) &
+                        leduc$MedianCV < 0.42 &
+                        grepl("Mono|Mel", leduc$SampleType))
+}
 
-    # Normalization
-
-
+leducNormPep <- function(leduc){
     ## Scale column with median
     leduc <- QFeatures::normalize(leduc,
-                       i = "peptides",
-                       method = "div.median",
-                       name = "peptides_norm1")
+                                  i = "peptides",
+                                  method = "div.median",
+                                  name = "peptides_norm1")
     ## Scale rows with median
-    leduc <- sweep(leduc,
-                   i = "peptides_norm1",
-                   name = "peptides_norm2",
-                   MARGIN = 1,
-                   FUN = "/",
-                   STATS = rowMedians(assay(leduc[["peptides_norm1"]]),
-                                      na.rm = TRUE))
+    sweep(leduc,
+               i = "peptides_norm1",
+               name = "peptides_norm2",
+               MARGIN = 1,
+               FUN = "/",
+               STATS = rowMedians(assay(leduc[["peptides_norm1"]]),
+                                  na.rm = TRUE))
+}
 
+leducFilteringNA <- function(leduc){
     leduc <- filterNA(leduc,
                       i = "peptides_norm2",
                       pNA = 0.99)
@@ -183,42 +244,42 @@ leduc2022script <- function(leduc){
     nnaRes <- nNA(leduc, "peptides_norm2")
     sel <- nnaRes$nNAcols$pNA < 99
     leduc[["peptides_norm2"]] <- leduc[["peptides_norm2"]][, sel]
+    leduc
+}
 
-    # Log-transformation
+leducLogTransfo <- function(leduc){
+    logTransform(leduc,
+                      base = 2,
+                      i = "peptides_norm2",
+                      name = "peptides_log")
+}
 
-    leduc <- logTransform(leduc,
-                          base = 2,
-                          i = "peptides_norm2",
-                          name = "peptides_log")
+leducAggPep <- function(leduc){
+    aggregateFeatures(leduc,
+                           i = "peptides_log",
+                           name = "proteins",
+                           fcol = "Leading.razor.protein.symbol",
+                           fun = matrixStats::colMedians,
+                           na.rm = TRUE)
+}
 
-
-    # Aggregate peptide data to protein data
-
-    leduc <- aggregateFeatures(leduc,
-                               i = "peptides_log",
-                               name = "proteins",
-                               fcol = "Leading.razor.protein.symbol",
-                               fun = matrixStats::colMedians,
-                               na.rm = TRUE)
-
-    # Normalization
-
+leducNormPro <- function(leduc){
     ## Center columns with median
     leduc <- QFeatures::normalize(leduc,
-                       i = "proteins",
-                       method = "center.median",
-                       name = "proteins_norm1")
+                                  i = "proteins",
+                                  method = "center.median",
+                                  name = "proteins_norm1")
     ## Scale rows with median
-    leduc <- sweep(leduc,
-                   i = "proteins_norm1",
-                   name = "proteins_norm2",
-                   MARGIN = 1,
-                   FUN = "-",
-                   STATS = rowMedians(assay(leduc[["proteins_norm1"]]),
-                                      na.rm = TRUE))
+    sweep(leduc,
+               i = "proteins_norm1",
+               name = "proteins_norm2",
+               MARGIN = 1,
+               FUN = "-",
+               STATS = rowMedians(assay(leduc[["proteins_norm1"]]),
+                                  na.rm = TRUE))
+}
 
-    # Imputation
-
+leducImpute <- function(leduc){
     data.frame(pNA = nNA(leduc, "proteins_norm2")$nNAcols$pNA) %>%
         ggplot(aes(x = pNA)) +
         geom_histogram() +
@@ -230,14 +291,14 @@ leduc2022script <- function(leduc){
                              name = "proteins_impd",
                              k = 3)
 
-    leduc <- impute(leduc,
-                    i = "proteins_norm2",
-                    method = "knn",
-                    k = 3, rowmax = 1, colmax= 1,
-                    maxp = Inf, rng.seed = 1234)
+    impute(leduc,
+                i = "proteins_norm2",
+                method = "knn",
+                k = 3, rowmax = 1, colmax= 1,
+                maxp = Inf, rng.seed = 1234)
+}
 
-    # Batch correction
-
+leducBatch <- function(leduc){
     sce <- getWithColData(leduc, "proteins_impd")
 
     model <- model.matrix(~ SampleType, data = colData(sce))
@@ -249,33 +310,31 @@ leduc2022script <- function(leduc){
     leduc <- addAssay(leduc, y = sce, name = "proteins_batchC")
     leduc <- addAssayLinkOneToOne(leduc, from = "proteins_impd",
                                   to = "proteins_batchC")
+    leduc
+}
 
-    # Normalization
-
+leducNormBatch <- function(leduc){
     ## Center columns with median
     leduc <- QFeatures::normalize(leduc,
-                       i = "proteins_batchC",
-                       method = "center.median",
-                       name = "proteins_batchC_norm1")
+                                  i = "proteins_batchC",
+                                  method = "center.median",
+                                  name = "proteins_batchC_norm1")
     ## Scale rows with median
-    leduc <- sweep(leduc,
-                   i = "proteins_batchC_norm1",
-                   name = "proteins_processed",
-                   MARGIN = 1,
-                   FUN = "-",
-                   STATS = rowMedians(assay(leduc[["proteins_batchC_norm1"]]),
-                                      na.rm = TRUE))
+    sweep(leduc,
+               i = "proteins_batchC_norm1",
+               name = "proteins_processed",
+               MARGIN = 1,
+               FUN = "-",
+               STATS = rowMedians(assay(leduc[["proteins_batchC_norm1"]]),
+                                  na.rm = TRUE))
+}
 
-    # PCA
-
-    ## Perform PCA, see ?runPCA for more info about arguments
-    # runPCA(sce, ncomponents = 50,
-    #        ntop = Inf,
-    #        scale = TRUE,
-    #        exprs_values = 1,
-    #        name = "PCA") %>%
-    #     ## Plotting is performed in a single line of code
-    #     plotPCA(colour_by = "SampleType")
-
-    return(object.size(leduc), units = "GB")
+leducPCA <- function(leduc){
+    runPCA(sce, ncomponents = 50,
+           ntop = Inf,
+           scale = TRUE,
+           exprs_values = 1,
+           name = "PCA") %>%
+        ## Plotting is performed in a single line of code
+        plotPCA(colour_by = "SampleType")
 }

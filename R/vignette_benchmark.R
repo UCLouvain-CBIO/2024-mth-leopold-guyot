@@ -8,18 +8,20 @@ source("R/vignette_leduc2022_script.R")
 
 leduc2022Benchmark <- function(nCellRange, rep) {
     base <- scpdata::leduc2022()
-    press(
-        nCell = nCellRange,
-        rep = rep,
-        {
-            set.seed(123)
-            print0("Starting generation of data for ",
-                   nCell,
-                   " Cellules...")
-            qfeatures <- leduc2022Generate(base, nCell)
-            bench::mark(leduc2022script(qfeatures), memory = TRUE)
-        }
-    )
+    results <- list()
+    for (nCell in nCellRange){
+        set.seed(123)
+        print(paste0("Starting generation of data for ",
+                     nCell,
+                     " Cellules..."))
+        qfeatures <- leduc2022Generate(base, nCell)
+        print(paste0("Starting benchmarking for ",
+                     nCell,
+                     " Cellules..."))
+        res <- peakRAM(leduc2022script(qfeatures))
+        results[[as.character(nCell)]] <- res
+    }
+    results
 }
 
 leduc2022Generate <- function(base, nCell) {
