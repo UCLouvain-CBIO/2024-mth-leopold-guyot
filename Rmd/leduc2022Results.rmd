@@ -1,0 +1,94 @@
+---
+title: "Results of the leduc2022 vignette benchmark"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+params: 
+    sizeInputPath: NULL
+    memoryUsageInputDir: NULL
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(tidyverse)
+```
+
+## Result pre-processing
+
+```{r dataLoading}
+objectSize <- read.table(file = params$sizeInputPath, header = TRUE)
+objectSize$nCell <- as.factor(objectSize$nCell)
+objectSize$rep <- as.factor(objectSize$rep)
+
+dataFrames <- lapply(list.files(path = params$memoryUsageInputDir, full.names = TRUE),
+       function(x) read.csv(x))
+names(dataFrames) <- list.files(path = params$memoryUsageInputDir, full.names = FALSE)
+names(dataFrames) <- gsub(pattern = ".csv", replacement = "", x = names(dataFrames))
+print(names(dataFrames))
+benchmarkDF <- bind_rows(dataFrames, .id = "run")
+benchmarkDF <- separate_wider_delim(data = benchmarkDF, cols = c("run"), delim = "_",
+                          names = c("nCell", "replicate"))
+
+benchmarkDF$vignette_step <- gsub(pattern = "(.*leduc)(.*)([.,/(]leduc.*)",
+                                  replacement = "\\2",
+                                  x = benchmarkDF$Function_Call)
+irrelevantIndices <- grep("write.table", benchmarkDF$vignette_step)
+benchmarkDF <- benchmarkDF[-irrelevantIndices,]
+```
+
+
+## Difference in final object size
+
+```{r objectSizeComparaison}
+objectSize %>%
+    group_by(nCell) %>%
+    summarise("sizeGB" = utils:::format.object_size(mean(size),
+                                                       units = "GB")) %>%
+    ggplot(aes(x = nCell, y = sizeGB)) + geom_col()
+```
+
+## Difference in total run time
+
+```{r timeBenchmark}
+benchmarkDF %>%
+    group_by(nCell, replicate) %>%
+    summarise("time" = sum(Elapsed_Time_sec)) %>%
+    ggplot(aes(x = nCell, y = time)) + geom_boxplot()
+```
+
+
+## Difference in peak RAM usage
+
+```{r peakBenchmark}
+benchmarkDF %>%
+    group_by(nCell, replicate) %>%
+    summarise("peak" = max(Peak_RAM_Used_MiB)) %>%
+    ggplot(aes(x = nCell, y = peak)) + geom_boxplot()
+```
+
+```{r propBenchmark}
+
+
+```
+
+## Hardware and software
+
+```{r, echo = FALSE, message = FALSE}
+sd <- benchmarkme::get_sys_details()
+cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
+    "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
+    " (svn: ", sd$r_version$`svn rev`, ")\n",
+    "RAM: ", round(sd$ram / 1E9, 1), " GB\n",
+    "CPU: ", sd$cpu$no_of_cores, " core(s) - ", sd$cpu$model_name, "\n",
+    sep = "")
+```
+
+
+```{r sessionInfo}
+sessionInfo()
+```
+
