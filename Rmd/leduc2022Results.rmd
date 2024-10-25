@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(benchmarkme)
 library(plotly)
-library(treemapify)
 ```
 
 ## Result pre-processing
@@ -77,11 +76,15 @@ ggplotly(plotTime)
 ```{r peakBenchmark}
 plotPeak <- benchmarkDF %>%
     group_by(nCell, replicate) %>%
-    summarise("peak" = max(Peak_RAM_Used_MiB)) %>%
+    summarise(peak = max(Peak_RAM_Used_MiB), .groups = 'drop') %>%
     group_by(nCell) %>% 
-    summarise("peak" = mean(peak)) %>% 
-    ggplot(aes(x = nCell, y = peak, fill = nCell)) + geom_col()
-ggplotly(plotPeak)
+    summarise(peak = mean(peak), .groups = 'drop') %>%
+    mutate(nCell = factor(nCell, levels = sort(unique(nCell)))) %>%  # Sort levels
+    ggplot(aes(x = nCell, y = peak, fill = nCell)) + 
+    geom_col() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Optional: rotate x-axis labels
+
+plotPeak
 ```
 
 ```{r ratioBenchmark}

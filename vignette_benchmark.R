@@ -4,9 +4,15 @@
 ############################# WORKFLOW PROFILING ###############################
 ################################################################################
 
-############################# Package loading #################################
+############################# Scripts loading #################################
 
 source("R/vignette_leduc2022_script.R")
 source("R/vignette_benchmark.R")
 
-print(leduc2022Benchmark(c(500, 1000), 1))
+
+start <- Sys.time()
+leduc2022BenchmarkDetails(c(500, 1000, 2000, 4000), 3)
+end <- Sys.time()
+
+print(start-end)
+
