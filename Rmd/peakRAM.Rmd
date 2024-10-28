@@ -1,0 +1,73 @@
+---
+title: "peakRAM exploration"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+    
+---
+
+```{r}
+library(peakRAM)
+```
+
+# Verify the time measurement
+
+```{r}
+start <- Sys.time()
+timeTest <- peakRAM(
+        Sys.sleep(2),
+        Sys.sleep(1))
+end <- Sys.time()
+!any(!(timeTest$Elapsed_Time_sec - c(2, 1) <= 1e-2))
+print(end - start)
+```
+
+# Explore memory consumption metrics
+
+```{r}
+# numeric(0) => 48 bytes
+# numeric(1) => + 8 bytes by element in the vector
+
+
+makeCopy1 <- function(object){
+    object1 <- object + 0
+    return(object1)
+}
+
+makeCopy2 <- function(object){
+    object1 <- object + 0
+    return(object)
+}
+
+
+object <- numeric(100000000) # 48 + 100000000*8 = 800000048 bytes
+object.size(object) 
+utils:::format.object_size(object.size(object), units = "MiB")
+
+peakRAM(makeCopy1(object),
+        makeCopy2(object),
+        makeCopy1(object),
+        makeCopy2(object),
+        makeCopy1(object),
+        makeCopy2(object))
+
+# Note that is equivalent to
+
+
+before <- gc(reset = TRUE)
+test <- makeCopy1(object)
+after <- gc()
+
+after - before 
+
+rm(test)
+
+before <- gc(reset = TRUE)
+test <- makeCopy2(object)
+after <- gc()
+
+after - before
+
+rm(test)
+```
+
