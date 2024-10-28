@@ -6,54 +6,32 @@ library(rmarkdown)
 
 source("R/vignette_leduc2022_script.R")
 
-leduc2022ResultGeneration <- function(sizeInputPath = "size_report.tsv",
-                                      memoryUsageInputDir = "dataOutput/memoryOutput",
+leduc2022ResultGeneration <- function(inputDir = "dataOutput/vignetteBenchmark",
                                       outputFile = "leduc2022BenchmarkResults.html",
                                       outputDir = "reports"){
     rmarkdown::render("Rmd/leduc2022Results.rmd",
-                      params = list(sizeInputPath = sizeInputPath,
-                                    memoryUsageInputDir = memoryUsageInputDir),
+                      params = list(inputDir = inputDir),
                       output_file = outputFile,
                       output_dir = outputDir,
                       knit_root_dir = getwd())
 }
 
-leduc2022Benchmark <- function(nCellRange, rep) {
-    base <- scpdata::leduc2022()
-    results <- list()
-    for (nCell in nCellRange){
-        set.seed(123)
-        print(paste0("Starting generation of data for ",
-                     nCell,
-                     " Cellules..."))
-        qfeatures <- leduc2022Generate(base, nCell)
-        print(paste0("Starting benchmarking for ",
-                     nCell,
-                     " Cellules..."))
-        res <- peakRAM(leduc2022script(qfeatures))
-        results[[as.character(nCell)]] <- res
-        gc()
-    }
-    results
-}
-
 leduc2022BenchmarkDetails <- function(nCellRange,
                                       nreplicates,
-                                      sizeOutputPath = "size_report.tsv",
-                                      memoryUsageOutputDir = "dataOutput/memoryOutput") {
-    if (file.exists(sizeOutputPath)) {
-        unlink(sizeOutputPath)
-        cat(sizeOutputPath, " has been deleted..\n")
+                                      outputDir = "dataOutput/vignetteBenchmark") {
+    if (file.exists(file.path(outputDir, "size_report.tsv"))) {
+        unlink(file.path(outputDir, "size_report.tsv"))
+        cat(file.path(outputDir, "size_report.tsv"), " has been deleted..\n")
     }
-    if (file.exists(memoryUsageOutputDir)) {
-        unlink(memoryUsageOutputDir,recursive = TRUE)
-        cat(memoryUsageOutputDir, " has been deleted\n")
+    if (file.exists(file.path(outputDir, "memoryOutput"))) {
+        unlink(file.path(outputDir, "memoryOutput"), recursive = TRUE)
+        cat(file.path(outputDir, "memoryOutput"), " has been deleted\n")
     }
-    dir.create(memoryUsageOutputDir)
+    dir.create(file.path(outputDir, "memoryOutput"))
     write.table(data.frame(nCell = integer(),
                            rep = integer(),
                            size = integer()),
-                file = sizeOutputPath,
+                file = file.path(outputDir, "size_report.tsv"),
                 append = FALSE,
                 col.names = TRUE,
                 row.names = FALSE)
@@ -112,17 +90,31 @@ leduc2022BenchmarkDetails <- function(nCellRange,
                 write.table(data.frame(nCell = as.integer(nCell),
                                      rep = as.integer(rep),
                                      size = object.size(leduc)),
-                          file = sizeOutputPath,
+                          file = file.path(outputDir, "size_report.tsv"),
                           append = TRUE,
                           col.names = FALSE,
                           row.names = FALSE)
             )
-            write.csv(res, file = file.path(memoryUsageOutputDir,
+            write.csv(res, file = file.path(outputDir, "memoryOutput",
                                             paste0(paste(
                                                 nCell, rep, sep = "_"),".csv")))
             gc()
         }
     }
+    sd <- benchmarkme::get_sys_details()
+    if (file.exists(file.path(outputDir, "memoryOutput", "hardware_software.txt"))) {
+        unlink(file.path(outputDir, "memoryOutput", "hardware_software.txt"))
+    }
+    sink(file.path(file.path(outputDir, "memoryOutput"), "hardware_software.txt"))
+    cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
+        "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
+        " (svn: ", sd$r_version$`svn rev`, ")\n",
+        "RAM: ", round(sd$ram / 1E9, 1), " GB\n",
+        "CPU: ", sd$cpu$no_of_cores, " core(s) - ", sd$cpu$model_name, "\n",
+        sep = "")
+    cat(" ----------------------------------------------------------------- \n")
+    print(sessionInfo())
+    sink()
 }
 
 
@@ -170,11 +162,3 @@ leduc2022Generate <- function(base, nCell) {
     }
     return(new_qfeatures)
 }
-
-sd <- benchmarkme::get_sys_details()
-cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
-    "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
-    " (svn: ", sd$r_version$`svn rev`, ")\n",
-    "RAM: ", round(sd$ram / 1E9, 1), " GB\n",
-    "CPU: ", sd$cpu$no_of_cores, " core(s) - ", sd$cpu$model_name, "\n",
-    sep = "")
