@@ -69,7 +69,7 @@ plotTime <- benchmarkDF %>%
     # Convert `nCell` to a factor with levels ordered numerically
     mutate(nCell = factor(nCell, levels = sort(as.numeric(unique(nCell))))) %>%
     group_by(nCell, replicate) %>%
-    summarise(time = sum(Elapsed_Time_sec)) %>%
+    summarise(time = sum(Elapsed_Time_sec)/60) %>%
     ggplot(aes(x = nCell, y = time, color = nCell)) + geom_boxplot()
 
 ggplotly(plotTime)

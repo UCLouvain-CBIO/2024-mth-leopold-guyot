@@ -368,54 +368,75 @@ end &lt;- Sys.time()
 !any(!(timeTest$Elapsed_Time_sec - c(2, 1) &lt;= 1e-2))</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>print(end - start)</code></pre>
-<pre><code>## Time difference of 3.181802 secs</code></pre>
+<pre><code>## Time difference of 3.173288 secs</code></pre>
+<p>As we can see, the Elapsed_Time_sec measure with precision the time
+taken by each individual expression. Note that the overall run time of
+the peakRAM is greater than the cumulative time of each individual
+expression.</p>
 </div>
 <div id="explore-memory-consumption-metrics" class="section level1">
 <h1>Explore memory consumption metrics</h1>
+<p>First we create an object of a fixed size. Then we use this object in
+two case, the first one simulate the case in which this object is copied
+during the execution of the expression but this copy is not returned.
+The second one simulate the case in which this copied version of the
+object is returned. Then we have a control that does not copy the object
+and returns the object.</p>
 <pre class="r"><code># numeric(0) =&gt; 48 bytes
 # numeric(1) =&gt; + 8 bytes by element in the vector
 
-
+makeCopyControl &lt;- function(object) {
+    return(object)
+}
 makeCopy1 &lt;- function(object){
     object1 &lt;- object + 0
-    return(object1)
+    return(list(object1, object))
 }
 
 makeCopy2 &lt;- function(object){
     object1 &lt;- object + 0
     return(object)
-}
-
-
-object &lt;- numeric(100000000) # 48 + 100000000*8 = 800000048 bytes
-object.size(object) </code></pre>
-<pre><code>## 800000048 bytes</code></pre>
-<pre class="r"><code>utils:::format.object_size(object.size(object), units = &quot;MiB&quot;)</code></pre>
-<pre><code>## [1] &quot;762.9 MiB&quot;</code></pre>
-<pre class="r"><code>peakRAM(makeCopy1(object),
-        makeCopy2(object),
-        makeCopy1(object),
-        makeCopy2(object),
+}</code></pre>
+<pre class="r"><code>object &lt;- numeric(100000000) # 48 + 100000000*8 = 800000048 bytes
+cat(&quot;Initial object size:&quot;, utils:::format.object_size(object.size(object),
+                                                       units = &quot;MiB&quot;))</code></pre>
+<pre><code>## Initial object size: 762.9 MiB</code></pre>
+<pre class="r"><code>peakRAM(makeCopyControl(object),
         makeCopy1(object),
         makeCopy2(object))</code></pre>
-<pre><code>##       Function_Call Elapsed_Time_sec Total_RAM_Used_MiB Peak_RAM_Used_MiB
-## 1 makeCopy1(object)            0.273                763             763.0
-## 2 makeCopy2(object)            0.237                  0             763.0
-## 3 makeCopy1(object)            0.251                764             767.3
-## 4 makeCopy2(object)            0.239                  0             763.0
-## 5 makeCopy1(object)            0.241                763             763.0
-## 6 makeCopy2(object)            0.246                  0             763.0</code></pre>
-<pre class="r"><code># Note that is equivalent to
+<pre><code>##             Function_Call Elapsed_Time_sec Total_RAM_Used_MiB Peak_RAM_Used_MiB
+## 1 makeCopyControl(object)            0.001                  0                 0
+## 2       makeCopy1(object)            0.263                763               763
+## 3       makeCopy2(object)            0.236                  0               763</code></pre>
+<p>We can see that for the control expression that do not produce any
+object and returns the orignal object, the
+<code>Total_RAM_Used_MiB</code> and <code>Peak_RAM_Used_MiB</code> are
+both equal to 0. For the second expression that makes a copy within the
+function and return this copy, we can see that
+<code>Total_RAM_Used_MiB</code> and <code>Peak_RAM_Used_MiB</code> are
+now equal to the size of this copy. In the third case that copy the
+object but does not return it, the <code>Total_RAM_Used_MiB</code> is
+equal to 0 while the <code>Peak_RAM_Used_MiB</code> is equal to the copy
+size.</p>
+<p>Note that we can get the same result by using the garbage collector
+that return the max memory used.</p>
+<pre class="r"><code>before &lt;- gc(reset = TRUE)
+test &lt;- makeCopyControl(object)
+after &lt;- gc()
 
-
+after - before </code></pre>
+<pre><code>##          used (Mb) gc trigger (Mb) max used (Mb)
+## Ncells  56544    3          0    0    75816  4.1
+## Vcells 127642    1          0    0   589951  4.5</code></pre>
+<pre class="r"><code>rm(test)
 before &lt;- gc(reset = TRUE)
 test &lt;- makeCopy1(object)
 after &lt;- gc()
 
 after - before </code></pre>
-<pre><code>##            used  (Mb) gc trigger (Mb)  max used  (Mb)
-## Ncells        5   0.0          0    0      6294   0.3
-## Vcells 99999986 762.9          0    0 100036181 763.2</code></pre>
+<pre><code>##             used  (Mb) gc trigger (Mb)  max used  (Mb)
+## Ncells      1679   0.1          0    0     22174   1.2
+## Vcells 100003780 762.9          0    0 100061389 763.4</code></pre>
 <pre class="r"><code>rm(test)
 
 before &lt;- gc(reset = TRUE)
@@ -424,9 +445,15 @@ after &lt;- gc()
 
 after - before</code></pre>
 <pre><code>##        used (Mb) gc trigger (Mb)  max used  (Mb)
-## Ncells    8    0          0    0      6293   0.3
-## Vcells    6    0          0    0 100036189 763.2</code></pre>
+## Ncells   16    0          0    0     17939   1.0
+## Vcells   39    0          0    0 100039738 763.2</code></pre>
 <pre class="r"><code>rm(test)</code></pre>
+<p>To summarize, the <code>Elapsed_Time_sec</code> return the execution
+time of the individual expression, <code>Total_RAM_Used_MiB</code>
+return the difference in used memory between before the execution and
+after, and <code>Peak_RAM_Used_MiB</code> return the maximum memory
+consumption of the call (compared to the memory state before the
+execution).</p>
 </div>
 
 

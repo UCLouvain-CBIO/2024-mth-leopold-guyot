@@ -1,69 +1,69 @@
-Machine: Linux (6.9.3-76060903-generic)
+Machine: Linux (6.11.4-201.fc40.x86_64)
 R version: R.4.4.1 (svn: 86737)
-RAM: 16.4 GB
-CPU: 12 core(s) - 12th Gen Intel(R) Core(TM) i5-1235U
- ----------------------------------------------------------------- 
+RAM: 32.7 GB
+CPU: 16 core(s) - AMD Ryzen 7 9700X 8-Core Processor
+ -----------------------------------------------------------------
 R version 4.4.1 (2024-06-14)
 Platform: x86_64-pc-linux-gnu
 Running under: Pop!_OS 24.04 LTS
 
 Matrix products: default
-BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
+BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0
 LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.0
 
 locale:
- [1] LC_CTYPE=en_GB.UTF-8       LC_NUMERIC=C               LC_TIME=en_GB.UTF-8       
- [4] LC_COLLATE=en_GB.UTF-8     LC_MONETARY=en_GB.UTF-8    LC_MESSAGES=en_GB.UTF-8   
- [7] LC_PAPER=en_GB.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
-[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_GB.UTF-8 LC_IDENTIFICATION=C       
+ [1] LC_CTYPE=en_GB.UTF-8       LC_NUMERIC=C               LC_TIME=en_GB.UTF-8
+ [4] LC_COLLATE=en_GB.UTF-8     LC_MONETARY=en_GB.UTF-8    LC_MESSAGES=en_GB.UTF-8
+ [7] LC_PAPER=en_GB.UTF-8       LC_NAME=C                  LC_ADDRESS=C
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_GB.UTF-8 LC_IDENTIFICATION=C
 
 time zone: Europe/Brussels
 tzcode source: system (glibc)
 
 attached base packages:
-[1] stats4    stats     graphics  grDevices utils     datasets  methods   base     
+[1] stats4    stats     graphics  grDevices utils     datasets  methods   base
 
 other attached packages:
- [1] plotly_4.10.4               benchmarkme_1.0.8           patchwork_1.3.0            
- [4] lubridate_1.9.3             forcats_1.0.0               stringr_1.5.1              
- [7] dplyr_1.1.4                 purrr_1.0.2                 readr_2.1.5                
-[10] tidyr_1.3.1                 tibble_3.2.1                ggplot2_3.5.1              
-[13] tidyverse_2.0.0             limma_3.60.6                SCP.replication_0.2.1      
-[16] rmarkdown_2.28              SingleCellExperiment_1.26.0 scp_1.14.0                 
-[19] scpdata_1.12.0              ExperimentHub_2.12.0        AnnotationHub_3.12.0       
-[22] BiocFileCache_2.12.0        dbplyr_2.5.0                QFeatures_1.14.2           
-[25] MultiAssayExperiment_1.30.3 SummarizedExperiment_1.34.0 Biobase_2.64.0             
-[28] GenomicRanges_1.56.2        GenomeInfoDb_1.40.1         IRanges_2.38.1             
-[31] S4Vectors_0.42.1            BiocGenerics_0.50.0         MatrixGenerics_1.16.0      
-[34] matrixStats_1.4.1           peakRAM_1.0.2              
+ [1] plotly_4.10.4               benchmarkme_1.0.8           patchwork_1.3.0
+ [4] lubridate_1.9.3             forcats_1.0.0               stringr_1.5.1
+ [7] dplyr_1.1.4                 purrr_1.0.2                 readr_2.1.5
+[10] tidyr_1.3.1                 tibble_3.2.1                ggplot2_3.5.1
+[13] tidyverse_2.0.0             limma_3.60.6                SCP.replication_0.2.1
+[16] rmarkdown_2.28              SingleCellExperiment_1.26.0 scp_1.14.0
+[19] scpdata_1.12.0              ExperimentHub_2.12.0        AnnotationHub_3.12.0
+[22] BiocFileCache_2.12.0        dbplyr_2.5.0                QFeatures_1.14.2
+[25] MultiAssayExperiment_1.30.3 SummarizedExperiment_1.34.0 Biobase_2.64.0
+[28] GenomicRanges_1.56.2        GenomeInfoDb_1.40.1         IRanges_2.38.1
+[31] S4Vectors_0.42.1            BiocGenerics_0.50.0         MatrixGenerics_1.16.0
+[34] matrixStats_1.4.1           peakRAM_1.0.2
 
 loaded via a namespace (and not attached):
-  [1] RColorBrewer_1.1-3      rstudioapi_0.17.1       jsonlite_1.8.9          magrittr_2.0.3         
-  [5] farver_2.1.2            zlibbioc_1.50.0         vctrs_0.6.5             memoise_2.0.1          
-  [9] htmltools_0.5.8.1       S4Arrays_1.4.1          curl_5.2.3              SparseArray_1.4.8      
- [13] sass_0.4.9              bslib_0.8.0             htmlwidgets_1.6.4       plyr_1.8.9             
- [17] cachem_1.1.0            igraph_2.1.1            iterators_1.0.14        lifecycle_1.0.4        
- [21] pkgconfig_2.0.3         Matrix_1.6-5            R6_2.5.1                fastmap_1.2.0          
- [25] GenomeInfoDbData_1.2.12 clue_0.3-65             digest_0.6.37           fdrtool_1.2.18         
- [29] colorspace_2.1-1        AnnotationDbi_1.66.0    pkgload_1.4.0           crosstalk_1.2.1        
- [33] lpsymphony_1.32.0       RSQLite_2.3.7           labeling_0.4.3          filelock_1.0.3         
- [37] fansi_1.0.6             timechange_0.3.0        httr_1.4.7              abind_1.4-8            
- [41] mgcv_1.9-1              compiler_4.4.1          doParallel_1.0.17       bit64_4.5.2            
- [45] withr_3.0.1             BiocParallel_1.38.0     DBI_1.2.3               highr_0.11             
- [49] MASS_7.3-60.0.1         rappdirs_0.3.3          DelayedArray_0.30.1     OrgMassSpecR_0.5-3     
- [53] tools_4.4.1             glue_1.8.0              nlme_3.1-164            grid_4.4.1             
- [57] cluster_2.1.6           reshape2_1.4.4          generics_0.1.3          sva_3.52.0             
- [61] gtable_0.3.5            tzdb_0.4.0              data.table_1.16.2       hms_1.1.3              
- [65] metapod_1.12.0          utf8_1.2.4              XVector_0.44.0          foreach_1.5.2          
- [69] ggrepel_0.9.6           BiocVersion_3.19.1      pillar_1.9.0            genefilter_1.86.0      
- [73] benchmarkmeData_1.0.4   splines_4.4.1           lattice_0.22-5          survival_3.5-8         
- [77] bit_4.5.0               annotate_1.82.0         tidyselect_1.2.1        locfit_1.5-9.10        
- [81] Biostrings_2.72.1       knitr_1.48              ProtGenerics_1.36.0     edgeR_4.2.2            
- [85] IHW_1.32.0              xfun_0.48               statmod_1.5.0           stringi_1.8.4          
- [89] UCSC.utils_1.0.0        lazyeval_0.2.2          yaml_2.3.10             evaluate_1.0.1         
- [93] codetools_0.2-19        nipals_0.8              MsCoreUtils_1.16.1      BiocManager_1.30.25    
- [97] cli_3.6.3               xtable_1.8-4            reticulate_1.39.0       jquerylib_0.1.4        
-[101] munsell_0.5.1           Rcpp_1.0.13             png_0.1-8               XML_3.99-0.17          
-[105] parallel_4.4.1          blob_1.2.4              AnnotationFilter_1.28.0 viridisLite_0.4.2      
-[109] slam_0.1-54             scales_1.3.0            crayon_1.5.3            rlang_1.1.4            
-[113] KEGGREST_1.44.1        
+  [1] RColorBrewer_1.1-3      rstudioapi_0.17.1       jsonlite_1.8.9          magrittr_2.0.3
+  [5] farver_2.1.2            zlibbioc_1.50.0         vctrs_0.6.5             memoise_2.0.1
+  [9] htmltools_0.5.8.1       S4Arrays_1.4.1          curl_5.2.3              SparseArray_1.4.8
+ [13] sass_0.4.9              bslib_0.8.0             htmlwidgets_1.6.4       plyr_1.8.9
+ [17] cachem_1.1.0            igraph_2.1.1            iterators_1.0.14        lifecycle_1.0.4
+ [21] pkgconfig_2.0.3         Matrix_1.6-5            R6_2.5.1                fastmap_1.2.0
+ [25] GenomeInfoDbData_1.2.12 clue_0.3-65             digest_0.6.37           fdrtool_1.2.18
+ [29] colorspace_2.1-1        AnnotationDbi_1.66.0    pkgload_1.4.0           crosstalk_1.2.1
+ [33] lpsymphony_1.32.0       RSQLite_2.3.7           labeling_0.4.3          filelock_1.0.3
+ [37] fansi_1.0.6             timechange_0.3.0        httr_1.4.7              abind_1.4-8
+ [41] mgcv_1.9-1              compiler_4.4.1          doParallel_1.0.17       bit64_4.5.2
+ [45] withr_3.0.1             BiocParallel_1.38.0     DBI_1.2.3               highr_0.11
+ [49] MASS_7.3-60.0.1         rappdirs_0.3.3          DelayedArray_0.30.1     OrgMassSpecR_0.5-3
+ [53] tools_4.4.1             glue_1.8.0              nlme_3.1-164            grid_4.4.1
+ [57] cluster_2.1.6           reshape2_1.4.4          generics_0.1.3          sva_3.52.0
+ [61] gtable_0.3.5            tzdb_0.4.0              data.table_1.16.2       hms_1.1.3
+ [65] metapod_1.12.0          utf8_1.2.4              XVector_0.44.0          foreach_1.5.2
+ [69] ggrepel_0.9.6           BiocVersion_3.19.1      pillar_1.9.0            genefilter_1.86.0
+ [73] benchmarkmeData_1.0.4   splines_4.4.1           lattice_0.22-5          survival_3.5-8
+ [77] bit_4.5.0               annotate_1.82.0         tidyselect_1.2.1        locfit_1.5-9.10
+ [81] Biostrings_2.72.1       knitr_1.48              ProtGenerics_1.36.0     edgeR_4.2.2
+ [85] IHW_1.32.0              xfun_0.48               statmod_1.5.0           stringi_1.8.4
+ [89] UCSC.utils_1.0.0        lazyeval_0.2.2          yaml_2.3.10             evaluate_1.0.1
+ [93] codetools_0.2-19        nipals_0.8              MsCoreUtils_1.16.1      BiocManager_1.30.25
+ [97] cli_3.6.3               xtable_1.8-4            reticulate_1.39.0       jquerylib_0.1.4
+[101] munsell_0.5.1           Rcpp_1.0.13             png_0.1-8               XML_3.99-0.17
+[105] parallel_4.4.1          blob_1.2.4              AnnotationFilter_1.28.0 viridisLite_0.4.2
+[109] slam_0.1-54             scales_1.3.0            crayon_1.5.3            rlang_1.1.4
+[113] KEGGREST_1.44.1

@@ -21,17 +21,22 @@ end <- Sys.time()
 !any(!(timeTest$Elapsed_Time_sec - c(2, 1) <= 1e-2))
 print(end - start)
 ```
+As we can see, the Elapsed_Time_sec measure with precision the time taken by each individual expression.
+Note that the overall run time of the peakRAM is greater than the cumulative time of each individual expression.
 
 # Explore memory consumption metrics
 
+First we create an object of a fixed size. Then we use this object in two case, the first one simulate the case in which this object is copied during the execution of the expression but this copy is not returned. The second one simulate the case in which this copied version of the object is returned. Then we have a control that does not copy the object and returns the object.
 ```{r}
 # numeric(0) => 48 bytes
 # numeric(1) => + 8 bytes by element in the vector
 
-
+makeCopyControl <- function(object) {
+    return(object)
+}
 makeCopy1 <- function(object){
     object1 <- object + 0
-    return(object1)
+    return(list(object1, object))
 }
 
 makeCopy2 <- function(object){
@@ -39,21 +44,28 @@ makeCopy2 <- function(object){
     return(object)
 }
 
+```
 
+```{r} 
 object <- numeric(100000000) # 48 + 100000000*8 = 800000048 bytes
-object.size(object) 
-utils:::format.object_size(object.size(object), units = "MiB")
+cat("Initial object size:", utils:::format.object_size(object.size(object),
+                                                       units = "MiB"))
 
-peakRAM(makeCopy1(object),
-        makeCopy2(object),
-        makeCopy1(object),
-        makeCopy2(object),
+peakRAM(makeCopyControl(object),
         makeCopy1(object),
         makeCopy2(object))
+```
+We can see that for the control expression that do not produce any object and returns the orignal object, the `Total_RAM_Used_MiB` and `Peak_RAM_Used_MiB` are both equal to 0. For the second expression that makes a copy within the function and return this copy, we can see that `Total_RAM_Used_MiB` and `Peak_RAM_Used_MiB` are now equal to the size of this copy. In the third case that copy the object but does not return it, the `Total_RAM_Used_MiB` is equal to 0 while the `Peak_RAM_Used_MiB` is equal to the copy size.
 
-# Note that is equivalent to
+Note that we can get the same result by using the garbage collector that return the max memory used.
+```{r}
+before <- gc(reset = TRUE)
+test <- makeCopyControl(object)
+after <- gc()
 
+after - before 
 
+rm(test)
 before <- gc(reset = TRUE)
 test <- makeCopy1(object)
 after <- gc()
@@ -71,3 +83,4 @@ after - before
 rm(test)
 ```
 
+To summarize, the `Elapsed_Time_sec` return the execution time of the individual expression, `Total_RAM_Used_MiB` return the difference in used memory between before the execution and after, and `Peak_RAM_Used_MiB` return the maximum memory consumption of the call (compared to the memory state before the execution).
