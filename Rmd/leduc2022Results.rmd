@@ -21,12 +21,13 @@ library(plotly)
 ## Result pre-processing
 
 ```{r dataLoading}
-objectSize <- read.table(file = file.path(params$inputDir, "size_report.tsv"),
+inputDir <- "dataOutput/vignetteBenchmark"
+objectSize <- read.table(file = file.path(inputDir, "size_report.tsv"),
                          header = TRUE)
 objectSize$nCell <- as.factor(objectSize$nCell)
 objectSize$rep <- as.factor(objectSize$rep)
 
-dataFrames <- lapply(list.files(path = file.path(params$inputDir,
+dataFrames <- lapply(list.files(path = file.path(inputDir,
                                                  "memoryOutput"),
                                                  full.names = TRUE),
        function(x){
@@ -35,7 +36,7 @@ dataFrames <- lapply(list.files(path = file.path(params$inputDir,
             df %>% 
                 mutate(ratioTime = Elapsed_Time_sec / total_time)
        })
-names(dataFrames) <- list.files(path = file.path(params$inputDir,"memoryOutput"), full.names = FALSE)
+names(dataFrames) <- list.files(path = file.path(inputDir,"memoryOutput"), full.names = FALSE)
 names(dataFrames) <- gsub(pattern = ".csv", replacement = "", x = names(dataFrames))
 
 benchmarkDF <- bind_rows(dataFrames, .id = "run")

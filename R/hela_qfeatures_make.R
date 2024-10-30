@@ -1,20 +1,28 @@
-library(curl)
-url <- "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2023/12/PXD042233"
-files <- c(
-    "precursors_aggregated.zip",
-    "peptides_aggregated.zip",
-    "geneGroups_aggregated.zip"
-)
+library(rpx)
+library(QFeatures)
 
-for (file in files) {
-    curl_download(url = file.path(url, file), destfile = file)
-    unzip(file, exdir = sub("\\..[^\\.]*$", "", file))
-    file.remove(file)
-}
+px <- PXDataset("PXD042233")
+test <- read.delim("2013_04_03_16_54_Q-Exactive-Orbitrap_1/evidence.txt")
+maxzip <- grep("Orbitrap.*zip", pxfiles(px), value = TRUE)
+sampleAnnot <- pxget(px, "Experimental-Design.sdrf.tsv")
+sampleAnnot <- read.delim(sampleAnnot)
+sampleAnnot$runCol <- sampleAnnot$source.name
+sampleAnnot$quantCols <- rep("Intensity", nrow(sampleAnnot))
+maxzip <- maxzip[1:10]
 
-# Load precursor quantification data
-PSM <-  read.csv("precursors_aggregated/precursors/intensities_wide_selected_N49339_M07444.csv")
 
-peptides <- read.csv("peptides_aggregated/peptides/intensities_wide_selected_N42723_M07444.csv")
+matrixList <- lapply(maxzip, function(x){
+    zipFile <- pxget(px, x)
+    baseName <- sub(".zip", "", x)
+    unzip(zipFile, files = file.path(baseName, "evidence.txt"), exdir = "tmp")
+    quantTable <- read.delim(file.path("tmp", baseName, "evidence.txt"))
+    quantTable$runCol <- rep(baseName, nrow(quantTable))
+    quantTable
+})
 
-geneGroups <- read.csv("geneGroups_aggregated/geneGroups/intensities_wide_selected_N04547_M07444.csv")
+unlink("tmp", recursive = TRUE)
+quantTable <- do.call(rbind, matrixList)
+
+qfeatures <- readQFeatures(quantTable, colData = sampleAnnot, runCol = "runCol")
+
+saveRDS(qfeatures, file = "dataOutput/hela/qfeatures_PSM.rds")

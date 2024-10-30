@@ -2,21 +2,10 @@ library(peakRAM)
 library(scpdata)
 library(scp)
 library(SingleCellExperiment)
-library(rmarkdown)
 
 source("R/vignette_leduc2022_script.R")
 
-leduc2022ResultGeneration <- function(inputDir = "dataOutput/vignetteBenchmark",
-                                      outputFile = "leduc2022BenchmarkResults.html",
-                                      outputDir = "reports"){
-    rmarkdown::render("Rmd/leduc2022Results.rmd",
-                      params = list(inputDir = inputDir),
-                      output_file = outputFile,
-                      output_dir = outputDir,
-                      knit_root_dir = getwd())
-}
-
-leduc2022BenchmarkDetails <- function(nCellRange,
+leduc2022Benchmark <- function(nCellRange,
                                       nreplicates,
                                       outputDir = "dataOutput/vignetteBenchmark") {
     if (file.exists(file.path(outputDir, "size_report.tsv"))) {
@@ -102,10 +91,10 @@ leduc2022BenchmarkDetails <- function(nCellRange,
         }
     }
     sd <- benchmarkme::get_sys_details()
-    if (file.exists(file.path(outputDir, "memoryOutput", "hardware_software.txt"))) {
-        unlink(file.path(outputDir, "memoryOutput", "hardware_software.txt"))
+    if (file.exists(file.path(outputDir, "hardware_software.txt"))) {
+        unlink(file.path(outputDir, "hardware_software.txt"))
     }
-    sink(file.path(file.path(outputDir, "memoryOutput"), "hardware_software.txt"))
+    sink(file.path(outputDir, "hardware_software.txt"))
     cat("Machine: ", sd$sys_info$sysname, " (", sd$sys_info$release, ")\n",
         "R version: R.", sd$r_version$major, ".", sd$r_version$minor,
         " (svn: ", sd$r_version$`svn rev`, ")\n",

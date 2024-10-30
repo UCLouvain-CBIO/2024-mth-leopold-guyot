@@ -11,7 +11,7 @@
 
 <meta name="author" content="Léopold Guyot" />
 
-<meta name="date" content="2024-10-28" />
+<meta name="date" content="2024-10-30" />
 
 <title>peakRAM exploration</title>
 
@@ -352,7 +352,7 @@ display: none;
 
 <h1 class="title toc-ignore">peakRAM exploration</h1>
 <h4 class="author">Léopold Guyot</h4>
-<h4 class="date">2024-10-28</h4>
+<h4 class="date">2024-10-30</h4>
 
 </div>
 
@@ -368,7 +368,7 @@ end &lt;- Sys.time()
 !any(!(timeTest$Elapsed_Time_sec - c(2, 1) &lt;= 1e-2))</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>print(end - start)</code></pre>
-<pre><code>## Time difference of 3.173288 secs</code></pre>
+<pre><code>## Time difference of 6.754092 secs</code></pre>
 <p>As we can see, the Elapsed_Time_sec measure with precision the time
 taken by each individual expression. Note that the overall run time of
 the peakRAM is greater than the cumulative time of each individual
@@ -405,9 +405,9 @@ cat(&quot;Initial object size:&quot;, utils:::format.object_size(object.size(obj
         makeCopy1(object),
         makeCopy2(object))</code></pre>
 <pre><code>##             Function_Call Elapsed_Time_sec Total_RAM_Used_MiB Peak_RAM_Used_MiB
-## 1 makeCopyControl(object)            0.001                  0                 0
-## 2       makeCopy1(object)            0.263                763               763
-## 3       makeCopy2(object)            0.236                  0               763</code></pre>
+## 1 makeCopyControl(object)            0.000                0.0               0.0
+## 2       makeCopy1(object)            0.882              762.9             762.9
+## 3       makeCopy2(object)            0.264                0.0             762.9</code></pre>
 <p>We can see that for the control expression that do not produce any
 object and returns the orignal object, the
 <code>Total_RAM_Used_MiB</code> and <code>Peak_RAM_Used_MiB</code> are
@@ -425,18 +425,18 @@ test &lt;- makeCopyControl(object)
 after &lt;- gc()
 
 after - before </code></pre>
-<pre><code>##          used (Mb) gc trigger (Mb) max used (Mb)
-## Ncells  56544    3          0    0    75816  4.1
-## Vcells 127642    1          0    0   589951  4.5</code></pre>
+<pre><code>##        used (Mb) gc trigger (Mb) max used (Mb)
+## Ncells   18    0          0    0     6306  0.3
+## Vcells   35    0          0    0    36209  0.3</code></pre>
 <pre class="r"><code>rm(test)
 before &lt;- gc(reset = TRUE)
 test &lt;- makeCopy1(object)
 after &lt;- gc()
 
 after - before </code></pre>
-<pre><code>##             used  (Mb) gc trigger (Mb)  max used  (Mb)
-## Ncells      1679   0.1          0    0     22174   1.2
-## Vcells 100003780 762.9          0    0 100061389 763.4</code></pre>
+<pre><code>##         used  (Mb) gc trigger (Mb)  max used  (Mb)
+## Ncells 1e+01   0.0          0    0      6310   0.3
+## Vcells 1e+08 762.9          0    0 100036237 763.2</code></pre>
 <pre class="r"><code>rm(test)
 
 before &lt;- gc(reset = TRUE)
@@ -445,8 +445,8 @@ after &lt;- gc()
 
 after - before</code></pre>
 <pre><code>##        used (Mb) gc trigger (Mb)  max used  (Mb)
-## Ncells   16    0          0    0     17939   1.0
-## Vcells   39    0          0    0 100039738 763.2</code></pre>
+## Ncells  544    0          0    0     22449   1.2
+## Vcells  877    0          0    0 100109488 763.8</code></pre>
 <pre class="r"><code>rm(test)</code></pre>
 <p>To summarize, the <code>Elapsed_Time_sec</code> return the execution
 time of the individual expression, <code>Total_RAM_Used_MiB</code>

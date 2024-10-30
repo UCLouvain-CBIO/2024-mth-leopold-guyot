@@ -1,53 +1,30 @@
 # Benchmark of QFeatures perfromances
 
-## Installation
-
-```r
-if (!require("remotes", quietly = TRUE)){
-    install.packages("remotes")
-}
-# Install the package
-remotes::install_github("UCLouvain-CBIO/2024-mth-leopold-guyot",
-    build_manual = TRUE
-)
-# Load the package
-library(benchmarkQFeatures)
-```
-
-## Launch Profiling
-
-### In R
-```r
-# Load the package
-library(benchmarkQFeatures)
-
-# Run the profiling
-
-profilingExecution(nFeaturesRange = c(500, 1000, 1500),
-                        nRunsRange = c(4, 8, 16),
-                        naRateRange = c(0.4, 0.6, 0.8),
-                        nReplicates = 3,
-                        outputFolder = "dataOutput/profilingResults")
-```
+## Vignette Benchmarking
 
 ### In command line
 
-First install the script within R
-
-```r
-# Load the package
-library(benchmarkQFeatures)
-
-# Install scripts
-installScripts("~/dev/scripts")
-```
-
-Launch script execution trough terminal
-
+Run benchmark + generate result report (in reports/leduc2022Results.html)
 ```console
+~$ chmod +x scripts/vignetteBenchmarkScript.R
+
 ~$ # without parameters
-~$ ./workflow_profiling
+~$ scripts/vignetteBenchmarkScript.R 
 
 ~$ # with parameters
-~$ ./workflow_profiling "list(naRateRange = c(0.4, 0.6), nFeaturesRange = c(500, 1000), nRunsRange = c(4, 8), nReplicates = 3, outputFolder = "profilingOutput")"
+~$ scripts/vignetteBenchmarkScript.R -cellRange "c(1000, 2000, 4000)" -nReplicates 3
+```
+
+### In R
+
+```R
+source(file.path("R", "vignette_benchmark.R"))
+source(file.path("R", "utils.R"))
+
+cellRange <- c(1000, 2000, 4000)
+nReplicates <- 3
+
+leduc2022Benchmark(cellRange, nReplicates)
+
+renderRmarkdown("leduc2022Results.rmd")
 ```
