@@ -9,7 +9,7 @@ sampleAnnot <- DataFrame(read.delim(sampleAnnot))
 sampleAnnot$runCol <- sampleAnnot$source.name
 sampleAnnot$quantCols <- rep("Intensity", nrow(sampleAnnot))
 rownames(sampleAnnot) <- sampleAnnot$source.name
-maxzip <- maxzip[1:10]
+maxzip <- maxzip[1:100]
 
 SEList <- lapply(maxzip, function(x){
     zipFile <- pxget(px, x)
@@ -22,6 +22,7 @@ SEList <- lapply(maxzip, function(x){
     SE <- readSummarizedExperiment(quantTable,
                                    quantCols = "Intensity",
                                    fnames = "PSMid")
+    # colnames(SE) <- baseName
     colData(SE) <- sampleAnnot[sampleAnnot$source.name == baseName, ]
     colData(SE) <- NULL
     SE
