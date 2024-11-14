@@ -1,0 +1,3 @@
+- Pour chaque opération: décrire les résultats en termes de complexité
+
+Pour R-nvim: \aa + a letter on the console cause an error + does not delete the tmp file

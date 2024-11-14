@@ -40,10 +40,12 @@ generateTMTPSM <- function(base, nCell) {
         newColData$Set <- paste0("run_", i)
         newColData$Channel <- as.character(newColData$Channel)
         newColData$IsolationTimeStamp <- as.character(newColData$IsolationTimeStamp)
+        newColData$filterBench <- rnorm(nrow(newColData), mean = 1, sd = 1)
         rownames(newColData) <- newSampleNames
 
         newRowData <- rowData(original_se)
         rownames(newRowData) <- newFeaturesNames
+        newRowData$filterBench <- rnorm(nrow(newRowData), mean = 1, sd = 1)
 
         psmCounter <- psmCounter + nrow(newRowData)
         noisy_se <- SingleCellExperiment(
@@ -111,6 +113,6 @@ generateTMTProteins <- function(TMTPeptides) {
 
 # using scpdata::brunner2022()
 generateLFPSM <- function(base, nCell) {
-    base <- base[,, -435]
+    base <- base[, , -435]
     return(NULL) #WIP
 }

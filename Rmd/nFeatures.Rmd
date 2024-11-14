@@ -1,0 +1,36 @@
+---
+title: "Impact of the number of Features"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+    
+---
+
+
+```{r}
+library(scpdata)
+library(scp)
+```
+
+```{r}
+leduc <- scpdata::leduc2022_pSCoPE()
+brunner <- scpdata::brunner2022()
+```
+
+
+
+```{r}
+rows <- c()
+for (i in seq_along(leduc)) {
+    rows <- c(rows, nrow(leduc[[i]]))
+}
+print(paste0("leduc min: ", median(rows)))
+
+rows <- c()
+for (i in seq_along(brunner)) {
+    rows <- c(rows, nrow(brunner[[i]]))
+}
+print(paste0("brunner min: ", median(rows)))
+```
+
+
