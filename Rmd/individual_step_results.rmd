@@ -1,0 +1,22 @@
+---
+title: "Results of the single step benchmark"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(tidyverse)
+library(benchmarkme)
+library(plotly)
+```
+
+```{r dataloading}
+inputDir <- "dataOutput/individualStepsBenchmark"
+list.files(path = inputDir, full.names = TRUE)
+```
+
