@@ -357,75 +357,24 @@ display: none;
 </div>
 
 
-<pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching core tidyverse packages ────────────────────────────────────────────────────── tidyverse 2.0.0 ──
-## ✔ dplyr     1.1.4     ✔ readr     2.1.5
-## ✔ forcats   1.0.0     ✔ stringr   1.5.1
-## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
-## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
-## ✔ purrr     1.0.2     
-## ── Conflicts ──────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ lubridate::%within%() masks IRanges::%within%()
-## ✖ dplyr::collapse()     masks IRanges::collapse()
-## ✖ dplyr::combine()      masks Biobase::combine(), BiocGenerics::combine()
-## ✖ dplyr::count()        masks matrixStats::count()
-## ✖ dplyr::desc()         masks IRanges::desc()
-## ✖ tidyr::expand()       masks S4Vectors::expand()
-## ✖ dplyr::filter()       masks stats::filter()
-## ✖ dplyr::first()        masks S4Vectors::first()
-## ✖ dplyr::lag()          masks stats::lag()
-## ✖ ggplot2::Position()   masks BiocGenerics::Position(), base::Position()
-## ✖ purrr::reduce()       masks GenomicRanges::reduce(), IRanges::reduce()
-## ✖ dplyr::rename()       masks S4Vectors::rename()
-## ✖ lubridate::second()   masks S4Vectors::second()
-## ✖ lubridate::second&lt;-() masks S4Vectors::second&lt;-()
-## ✖ dplyr::slice()        masks IRanges::slice()
-## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
-<pre class="r"><code>library(benchmarkme)
+<pre class="r"><code>library(tidyverse)
+library(benchmarkme)
 library(plotly)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;plotly&#39;
-## 
-## The following object is masked from &#39;package:ggplot2&#39;:
-## 
-##     last_plot
-## 
-## The following object is masked from &#39;package:IRanges&#39;:
-## 
-##     slice
-## 
-## The following object is masked from &#39;package:S4Vectors&#39;:
-## 
-##     rename
-## 
-## The following object is masked from &#39;package:stats&#39;:
-## 
-##     filter
-## 
-## The following object is masked from &#39;package:graphics&#39;:
-## 
-##     layout</code></pre>
-<pre class="r"><code>inputDir &lt;- &quot;dataOutput/individualStepsBenchmark/&quot;
-list.files(path = inputDir, full.names = TRUE)</code></pre>
-<pre><code>##  [1] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkFilterFeatures_1.csv&quot;
-##  [2] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkFilterFeatures_2.csv&quot;
-##  [3] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkFilterFeatures_3.csv&quot;
-##  [4] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkFilterSamples_1.csv&quot; 
-##  [5] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkFilterSamples_2.csv&quot; 
-##  [6] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkFilterSamples_3.csv&quot; 
-##  [7] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkZeroisNA_1.csv&quot;      
-##  [8] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkZeroisNA_2.csv&quot;      
-##  [9] &quot;dataOutput/individualStepsBenchmark//1000_benchmarkZeroisNA_3.csv&quot;      
-## [10] &quot;dataOutput/individualStepsBenchmark//500_benchmarkFilterFeatures_1.csv&quot; 
-## [11] &quot;dataOutput/individualStepsBenchmark//500_benchmarkFilterFeatures_2.csv&quot; 
-## [12] &quot;dataOutput/individualStepsBenchmark//500_benchmarkFilterFeatures_3.csv&quot; 
-## [13] &quot;dataOutput/individualStepsBenchmark//500_benchmarkFilterSamples_1.csv&quot;  
-## [14] &quot;dataOutput/individualStepsBenchmark//500_benchmarkFilterSamples_2.csv&quot;  
-## [15] &quot;dataOutput/individualStepsBenchmark//500_benchmarkFilterSamples_3.csv&quot;  
-## [16] &quot;dataOutput/individualStepsBenchmark//500_benchmarkZeroisNA_1.csv&quot;       
-## [17] &quot;dataOutput/individualStepsBenchmark//500_benchmarkZeroisNA_2.csv&quot;       
-## [18] &quot;dataOutput/individualStepsBenchmark//500_benchmarkZeroisNA_3.csv&quot;       
-## [19] &quot;dataOutput/individualStepsBenchmark//qfeatures_size_report.tsv&quot;</code></pre>
+<pre class="r"><code>inputDir &lt;- &quot;dataOutput/individualStepsBenchmark&quot;
+files &lt;- list.files(path = inputDir, full.names = TRUE)
+fileSizeReport &lt;- &quot;dataOutput/individualStepsBenchmark/qfeatures_size_report.tsv&quot;
+stepResults &lt;- files[!files == fileSizeReport]
+
+read.csv(stepResults[[1]], header = T)</code></pre>
+<pre><code>##   X
+## 1 1
+## 2 2
+##                                                                                                                                                                                                                                          Function_Call
+## 1                                                                                                                                                                                                  qfeaturesAfter&lt;-stepsPSM[[stepPSM]](qfeatures_step)
+## 2 write.table(data.frame(nCell=as.integer(size),rep=as.integer(i),step=stepPSM,sizeBefore=qfeaturesSizeBefore,sizeAfter=object.size(qfeaturesAfter)),file=file.path(destPath,&quot;qfeatures_size_report.tsv&quot;),append=TRUE,col.names=FALSE,row.names=FALSE)
+##   Elapsed_Time_sec Total_RAM_Used_MiB Peak_RAM_Used_MiB
+## 1          230.084                 93             217.1
+## 2            0.337                  0             109.2</code></pre>
 
 
 
