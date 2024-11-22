@@ -13,7 +13,7 @@ generateTMTPSM <- function(base, nCell) {
     } else {
         sampledAssays <- sample(seq_len(nAssays), nRun, replace = TRUE)
     }
-    new_qfeatures <- base[, , 0]
+    new_qfeatures <- QFeatures()
     psmCounter <- 0
     for (i in seq_len(nRun)) {
         assay_idx <- sampledAssays[i]
@@ -31,8 +31,8 @@ generateTMTPSM <- function(base, nCell) {
         rownames(newAssay) <- newFeaturesNames
 
         noise <- pmin(matrix(rnorm(n = length(newAssay), mean = 0, sd = 5),
-            nrow = nrow(newAssay),
-            ncol = ncol(newAssay)
+                             nrow = nrow(newAssay),
+                             ncol = ncol(newAssay)
         ), 0)
         noisyNewAssay <- newAssay + noise
 
@@ -57,7 +57,6 @@ generateTMTPSM <- function(base, nCell) {
     }
     return(new_qfeatures)
 }
-
 # using a QFeatures that only contains PSM assays, aggregate and joins these assays
 generateTMTPeptides <- function(TMTPSM) {
     removeDuplicates <- function(x) {
@@ -115,4 +114,48 @@ generateTMTProteins <- function(TMTPeptides) {
 generateLFPSM <- function(base, nCell) {
     base <- base[, , -435]
     return(NULL) #WIP
+}
+
+# Generate QFeatures with 4 different variable:
+#   - Number of cells by a assay
+#   - Number of features (PSM) by assay
+#   - Number of assay
+#   - Number of cols in rowData
+#
+# Using a LF dataset as base (scpdata::brunner2022())
+generate4VarData <- function(base,
+                             nCell,
+                             nFeat,
+                             nAssay,
+                             nCol,
+                             seed = 123) {
+    set.seed(seed)
+    sampledAssays <- sample(length(base) - 1, nAssay, replace = TRUE)
+
+    new_qfeatures <- QFeatures()
+    i <- 0
+    for (assay in sampledAssays) {
+        i <- i + 1
+        sampledFeatures <- sample(nrow(base[[assay]]), nFeat, replace = TRUE)
+        newAssay <- assay(base[[assay]])
+        newAssay <- as.matrix(newAssay[sampledFeatures, rep(1, nCell)])
+
+        newRowData <- rowData(base[[assay]])
+        sampledRowDataCols <- sample(ncol(newRowData), nCol, replace = TRUE)
+        newRowData <- newRowData[sampledFeatures, sampledRowDataCols]
+
+        newColData <- colData(getWithColData(base, i = assay))
+        newColData <- newColData[rep(1, nCell), ]
+
+        sce <- SingleCellExperiment(
+            assays = list(newAssay),
+            rowData = newRowData,
+            colData = newColData
+        )
+        rownames(sce) <- paste0("run_", i, "_PSM", 1:nrow(sce))
+        colnames(sce) <- paste0("run_", i, "_Cell", 1:ncol(sce))
+        new_qfeatures <- addAssay(new_qfeatures, sce, name = paste0("run_", i))
+    }
+    for (assay in names(new_qfeatures)) colData(new_qfeatures[[assay]]) <- NULL
+    return(new_qfeatures)
 }
