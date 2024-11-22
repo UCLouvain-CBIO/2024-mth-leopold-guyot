@@ -1,11 +1,16 @@
 library(scp)
 library(scpdata)
 library(peakRAM)
+library(pcaMethods)
 source(file.path("R", "generate_data.R"))
+source(file.path("R", "utils.R"))
+
 
 # Variables
 destPath <- file.path("dataOutput", "individualStepsBenchmark")
-replicate <- 2
+replicate <- 3
+sizes <- c(500, 1000, 2000, 4000)
+
 
 benchmarkFilterFeatures <- function(qfeatures) {
     filterFeatures(qfeatures, ~ filterBench > 1)
@@ -28,34 +33,62 @@ benchmarkAggPSM <- function(qfeatures) {
         fun = MsCoreUtils::robustSummary
     )
 }
-consensusMapping <- function(qfeatures) {
-    ## Generate a list of DataFrames with the information to modify
-    rbindRowData(qfeatures, i = grep("^pep", names(qfeatures))) %>%
-        data.frame %>%
-        group_by(modseq) %>%
-        ## The majority vote happens here
-        mutate(Leading.razor.protein.symbol =
-                   names(sort(table(Leading.razor.protein),
-                              decreasing = TRUE))[1]) %>%
-        select(modseq, Leading.razor.protein.symbol) %>%
-        filter(!duplicated(modseq, Leading.razor.protein.symbol)) ->
-        ppMap
-    consensus <- lapply(peptideAssays, function(i) {
-        ind <- match(rowData(qfeatures[[i]])$modseq, ppMap$modseq)
-        DataFrame(Leading.razor.protein.symbol =
-                      ppMap$Leading.razor.protein.symbol[ind])
-    })
-    ## Name the list
-    names(consensus) <- peptideAssays
-    ## Modify the rowData
-    rowData(qfeatures) <- consensus
 
-    qfeatures
-}
 benchmarkJoinPSM <- function(qfeatures) {
     joinAssays(qfeatures,
                i = paste0("peptide_", 1:(length(qfeatures)/2)),
                name = "peptides")
+}
+
+benchmarkNormSampPep <- function(qfeatures, assayName = "peptides") {
+    sweep(qfeatures,
+             i = assayName,
+             MARGIN = 2,
+             FUN = "/",
+             STATS = colMedians(assay(qfeatures[[assayName]]), na.rm = TRUE),
+             name = paste0(assayName, "_norm"))
+}
+
+benchmarkNormFeatPep <- function(qfeatures, assayName = "peptides") {
+    sweep(qfeatures,
+          i = assayName,
+          MARGIN = 1,
+          FUN = "/",
+          STATS = colMedians(assay(qfeatures[[assayName]]), na.rm = TRUE),
+          name = paste0(assayName, "_norm"))
+}
+
+benchmarkLogPep <- function(qfeatures, assayName = "peptides") {
+    logTransform(qfeatures,
+                   base = 2,
+                   i = assayName,
+                   name = paste0(assayName, "_log"))
+}
+
+benchmarkAggPep <- function(qfeatures, assayName = "peptides") {
+    aggregateFeatures(qfeatures,
+                      i = assayName,
+                      fcol = "Leading.razor.protein.symbol",
+                      fun = colMedians, na.rm = TRUE,
+                      name = sub("peptides", "proteins", assayName))
+}
+
+benchmarkImputPro <- function(qfeatures, assayName = "proteins") {
+    impute(qfeatures,
+              i = assayName,
+              method = "knn",
+              k = 3, rowmax = 1, colmax= 1,
+              name = "imputed_proteins")
+}
+
+benchmarkPCAPro <- function(qfeatures, assayName = "proteins") {
+    nipals_res <- assay(qfeatures[[assayName]]) %>%
+        as.data.frame() %>%
+        mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+        t() %>%
+        pcaMethods::pca(method = "nipals", nPcs = 20)
+    reducedDim(qfeatures[[assayName]], "NIPALS") <- pcaMethods::scores(nipals_res)
+    qfeatures
 }
 
 stepsPSM <- list(
@@ -66,9 +99,17 @@ stepsPSM <- list(
     "benchmarkJoinPSM" = benchmarkJoinPSM
     )
 
-stepsPep <- c()
+stepsPep <- list(
+    "benchmarkNormSampPep" = benchmarkNormSampPep,
+    "benchmarkNormFeatPep" = benchmarkNormFeatPep,
+    "benchmarkLogPep" = benchmarkLogPep,
+    "benchmarkAggPep" = benchmarkAggPep
+)
 
-stepsPro <- c()
+stepsPro <- list(
+    "benchmarkImputePro" = benchmarkImputPro#,
+    #"benchmarkPCAPro" = benchmarkPCAPro # not useful
+)
 
 unlink(destPath, recursive = TRUE)
 dir.create(destPath)
@@ -84,12 +125,15 @@ write.table(data.frame(nCell = integer(),
 
 leduc <- scpdata::leduc2022_pSCoPE()
 
-sizes <- c(500, 550)
 
 for (i in 1:replicate) {
     for (size in sizes) {
+        print(paste0("Starting dataset of size: ", size, " replicate no: ", i))
         qfeatures <- generateTMTPSM(leduc, size)
-        qfeaturesSizeBefore <- object.size(qfeatures)
+        qfeaturesTotalSizeBefore <- object.size(qfeatures)
+        qfeaturesAssaySizeBefore <- getAssaySize(qfeatures)
+        qfeaturesRowDataSizeBefore <- getRowDataSize(qfeatures)
+        qfeaturesColDataSizeBefore <- getColDataSize(qfeatures)
         for (stepPSM in names(stepsPSM)) {
             destFile <- file.path(destPath,
                 paste0(size, "_", stepPSM, "_", i, ".csv"))
@@ -97,29 +141,83 @@ for (i in 1:replicate) {
                 qfeatures_step <- benchmarkAggPSM(qfeatures)} else {
                     qfeatures_step <- qfeatures
                 }
+            suppressMessages(
             write.csv(peakRAM(qfeaturesAfter <- stepsPSM[[stepPSM]](qfeatures_step),
                               write.table(data.frame(nCell = as.integer(size),
                                                      rep = as.integer(i),
                                                      step = stepPSM,
-                                                     sizeBefore = qfeaturesSizeBefore,
-                                                     sizeAfter = object.size(qfeaturesAfter)),
+                                                     sizeTotalBefore = qfeaturesTotalSizeBefore,
+                                                     sizeTotalAfter = object.size(qfeaturesAfter),
+                                                     sizeAssayBefore = qfeaturesAssaySizeBefore,
+                                                     sizeAssayAfter = getAssaySize(qfeaturesAfter),
+                                                     sizeRowDataBefore = qfeaturesRowDataSizeBefore,
+                                                     sizeRowDataAfter = getRowDataSize(qfeaturesAfter),
+                                                     sizeColDataBefore = qfeaturesColDataSizeBefore,
+                                                     sizeColDataAfter = getColDataSize(qfeaturesAfter)),
                                           file = file.path(destPath, "qfeatures_size_report.tsv"),
                                           append = TRUE,
                                           col.names = FALSE,
                                           row.names = FALSE)
                               ),
-                destFile)
+                destFile))
 
 
         }
-        # qfeatures <- generateTMTPeptides(qfeatures)
-        # for (stepPep in stepsPep) {
-        #     peakRAM(stepPep(qfeatures))
-        # }
-        # qfeatures  <- generateTMTProteins(qfeatures)
-        # for (stepPro in stepsPro) {
-        #     peakRAM(stepPro(qfeatures))
-        # }
-
+        qfeatures <- generateTMTPeptides(qfeatures)
+        qfeaturesTotalSizeBefore <- object.size(qfeatures)
+        qfeaturesAssaySizeBefore <- getAssaySize(qfeatures)
+        qfeaturesRowDataSizeBefore <- getRowDataSize(qfeatures)
+        qfeaturesColDataSizeBefore <- getColDataSize(qfeatures)
+        for (stepPep in names(stepsPep)) {
+            destFile <- file.path(destPath,
+                                  paste0(size, "_", stepPep, "_", i, ".csv"))
+            suppressMessages(
+            write.csv(peakRAM(qfeaturesAfter <- stepsPep[[stepPep]](qfeatures),
+                              write.table(data.frame(nCell = as.integer(size),
+                                                     rep = as.integer(i),
+                                                     step = stepPep,
+                                                     sizeTotalBefore = qfeaturesTotalSizeBefore,
+                                                     sizeTotalAfter = object.size(qfeaturesAfter),
+                                                     sizeAssayBefore = qfeaturesAssaySizeBefore,
+                                                     sizeAssayAfter = getAssaySize(qfeaturesAfter),
+                                                     sizeRowDataBefore = qfeaturesRowDataSizeBefore,
+                                                     sizeRowDataAfter = getRowDataSize(qfeaturesAfter),
+                                                     sizeColDataBefore = qfeaturesColDataSizeBefore,
+                                                     sizeColDataAfter = getColDataSize(qfeaturesAfter)),
+                                          file = file.path(destPath, "qfeatures_size_report.tsv"),
+                                          append = TRUE,
+                                          col.names = FALSE,
+                                          row.names = FALSE)
+            ),
+            destFile))
+        }
+        qfeatures  <- generateTMTProteins(qfeatures)
+        qfeaturesTotalSizeBefore <- object.size(qfeatures)
+        qfeaturesAssaySizeBefore <- getAssaySize(qfeatures)
+        qfeaturesRowDataSizeBefore <- getRowDataSize(qfeatures)
+        qfeaturesColDataSizeBefore <- getColDataSize(qfeatures)
+        for (stepPro in names(stepsPro)) {
+            destFile <- file.path(destPath,
+                                  paste0(size, "_", stepPro, "_", i, ".csv"))
+            suppressMessages(
+            write.csv(peakRAM(qfeaturesAfter <- stepsPro[[stepPro]](qfeatures),
+                              write.table(data.frame(nCell = as.integer(size),
+                                                     rep = as.integer(i),
+                                                     step = stepPro,
+                                                     sizeTotalBefore = qfeaturesTotalSizeBefore,
+                                                     sizeTotalAfter = object.size(qfeaturesAfter),
+                                                     sizeAssayBefore = qfeaturesAssaySizeBefore,
+                                                     sizeAssayAfter = getAssaySize(qfeaturesAfter),
+                                                     sizeRowDataBefore = qfeaturesRowDataSizeBefore,
+                                                     sizeRowDataAfter = getRowDataSize(qfeaturesAfter),
+                                                     sizeColDataBefore = qfeaturesColDataSizeBefore,
+                                                     sizeColDataAfter = getColDataSize(qfeaturesAfter)),
+                                          file = file.path(destPath, "qfeatures_size_report.tsv"),
+                                          append = TRUE,
+                                          col.names = FALSE,
+                                          row.names = FALSE)
+            ),
+            destFile))
+        }
     }
 }
