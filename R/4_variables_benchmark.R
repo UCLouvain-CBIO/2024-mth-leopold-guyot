@@ -10,9 +10,9 @@ nCells <- c(1, 16, 32)
 
 nFeats <- c(1000, 2000, 4000)
 
-nAssays <- c(32, 64, 128)
+nAssays <- c(32, 64, 128, 256)
 
-nCols <- c(10, 50, 100)
+nCols <- c(10, 50, 100, 200)
 
 base <- scpdata::brunner2022()
 set.seed(123)
