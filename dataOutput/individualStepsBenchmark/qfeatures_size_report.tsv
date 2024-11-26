@@ -1,4 +1,4 @@
-"nCell" "rep" "step" "sizeBefore" "sizeAfter"
+"nCell" "rep" "step" "sizeTotalBefore" "sizeTotalAfter" "sizeAssayBefore" "sizeAssayAfter" "sizeRowDataBefore" "sizeRowDataAfter" "sizeColDataBefore" "sizeColDataAfter"
 500 1 "benchmarkFilterFeatures" 267896144 140364568 36322560 18229960 229513912 120410056 147944 147944
 500 1 "benchmarkFilterSamples" 267896144 256267544 36322560 24858048 229513912 229513912 147944 83304
 500 1 "benchmarkZeroisNA" 267896144 267896144 36322560 36322560 229513912 229513912 147944 147944
