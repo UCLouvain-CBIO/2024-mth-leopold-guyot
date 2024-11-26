@@ -5,6 +5,5 @@
 *.Rproj
 
 dataOutput/hela/*
-dataOutput/individualStepsBenchmark/*
 tmp/
 data/*
