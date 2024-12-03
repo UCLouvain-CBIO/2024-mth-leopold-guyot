@@ -1,0 +1,51 @@
+---
+title: "Results of the 4 variables benchmark"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(tidyverse)
+library(plotly)
+library(DT)
+```
+
+# Multi dimension size benchmark
+
+Size report on generated datasets. Each generated dataset is a combination of 4 variables that impact the object size, the variable are the following:
+- nFeat = Number of features by cell (PSM identification depth)
+- nCell = Number of cells by assay (batch) => 1, 16 or 32
+- nAssay = Number of assay (batch) in the QFeatures object
+- nCol = Number of columns in the rowData DataFrame (data associated with each PSM)
+
+The goal is to understand what is the most impactful variable in term of object size. We also want to know if the number of cells by assay (ie. Label-Free vs Labelled) impact the size for a constant number of total cells.
+
+```{r loadData}
+convert_bytes_to_mib <- function(bytes) {
+  mib <- bytes / (2^20)
+  return(mib)
+}
+
+sizeTable <- read.table("dataOutput/4_variables_benchmark/qfeatures_size_report.tsv", header = TRUE)
+
+sizeCols <- grep("size", colnames(sizeTable))
+for (sizeCol in sizeCols) {
+    sizeTable[[paste0(colnames(sizeTable)[[sizeCol]], "_MiB")]] <- convert_bytes_to_mib(sizeTable[[sizeCol]])
+}
+sizeTable$totalCells <- sizeTable$nCell * sizeTable$nAssay
+DT::datatable(sizeTable,
+                extensions = "FixedColumns",
+                options = list(
+                    searching = FALSE,
+                    scrollX = TRUE,
+                    fixedColumns = TRUE,
+                    pageLength = 10,
+                    lengthMenu = c(10, 25, 50)
+                ))
+```
+

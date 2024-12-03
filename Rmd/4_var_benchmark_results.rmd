@@ -13,7 +13,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(benchmarkme)
 library(plotly)
+library(patchwork)
 library(DT)
+library(GGally)
 ```
 
 ```{r loadData}
@@ -35,23 +37,12 @@ DT::datatable(sizeTable)
 ```{r compareLFTMT}
 # For the same number of cells: 
 
-# - nCell = 1, nAssay = 256, nFeat = 4000, nCol = 200      => * 4
-# - nCell = 16, nAssay = 32, nFeat = 4000, nCol = 200      => * 2
-# - nCell = 32, nAssay = 32, nFeat = 4000, nCol = 200
-
-sizeLFTMT <- sizeTable %>% 
+sizeLFTMT <- sizeTable %>%
     filter(nFeat == 4000,
-           nCol == 200,
-           (nAssay == 32 | nAssay == 256)) %>% 
-    filter(!(nCell == 16 & nAssay == 256),
-           !(nCell == 32 & nAssay == 256),
-           !(nCell == 1 & nAssay == 32)) %>% 
+           nCol == 100,
+           totalCells == 256) %>%
     mutate(totalCells = as.factor(totalCells),
            nCell = as.factor(nCell))
-
-sizeLFTMT[1, "sizeTotal_MiB"]  <- sizeLFTMT[1, "sizeTotal_MiB"] * 4
-sizeLFTMT[2, "sizeTotal_MiB"]  <- sizeLFTMT[2, "sizeTotal_MiB"] * 2
-
 
 ggplot(sizeLFTMT, aes(x = nCell, y = sizeTotal_MiB))+
            geom_col()
@@ -59,12 +50,12 @@ ggplot(sizeLFTMT, aes(x = nCell, y = sizeTotal_MiB))+
 
 ```{r rowDataRatio}
 
-plotRowDataRatio <- sizeTable %>% 
-    filter(nFeat == 4000) %>% 
+plotRowDataRatio <- sizeTable %>%
+    filter(nFeat == 4000) %>%
     mutate(nCell = as.factor(nCell),
            nAssay = as.factor(nAssay),
            nCol = as.factor(nCol),
-           ratioRowData = sizeRowData / sizeTotal) %>% 
+           ratioRowData = sizeRowData / sizeTotal) %>%
     ggplot(aes(x = nCell, y = nAssay, fill = ratioRowData)) +
         geom_tile() +
         facet_wrap(~nCol)
@@ -74,60 +65,95 @@ ggplotly(plotRowDataRatio)
 ```{r nFeat}
 
 # total QFeatures size
-sizeTable %>% 
-    filter(nAssay == 256,
-           nCol == 200) %>% 
+plotnFeat <- sizeTable %>%
+    filter(totalCells == 256,
+           nCol == 100) %>%
     mutate(nCell = as.factor(nCell),
-           nFeat = as.factor(nFeat)) %>% 
+           nFeat = as.factor(nFeat)) %>%
     ggplot(aes(x = nFeat, y = sizeTotal_MiB))+
         geom_col()+
         facet_wrap(~nCell)
-
+ggplotly(plotnFeat)
 # assay size
 
-sizeTable %>% 
-    filter(nAssay == 256,
-           nCol == 200) %>% 
+plotAssay <-  sizeTable %>%
+    filter(totalCells == 256,
+           nCol == 100) %>%
     mutate(nCell = as.factor(nCell),
-           nFeat = as.factor(nFeat)) %>% 
+           nFeat = as.factor(nFeat)) %>%
     ggplot(aes(x = nFeat, y = sizeAssay_MiB))+
         geom_col()+
         facet_wrap(~nCell)
+ggplotly(plotAssay)
 
 # rowData size
 
-sizeTable %>% 
-    filter(nAssay == 256,
-           nCol == 200) %>% 
+plotRowData <- sizeTable %>%
+    filter(totalCells == 256,
+           nCol == 100) %>%
     mutate(nCell = as.factor(nCell),
-           nFeat = as.factor(nFeat)) %>% 
+           nFeat = as.factor(nFeat)) %>%
     ggplot(aes(x = nFeat, y = sizeRowData_MiB))+
         geom_col()+
         facet_wrap(~nCell)
+
+ggplotly(plotRowData)
 ```
 
 ```{r propComponent}
 propTable <- sizeTable %>% 
-    filter(nCol == 50) %>% 
-    colSums() %>% 
-    as.data.frame()
+    filter(nCol == 50,
+           nFeat == 4000) %>%
+    filter(totalCells == 256) %>%
+    pivot_longer(cols = 10:12, names_to = "component", values_to = "size")
 
-propTable$component <- rownames(propTable)
-propTable <- propTable[rownames(propTable) %in% c("sizeTotal", "sizeRowData", "sizeColData", "sizeAssay"),]
-colnames(propTable)[1] <- "size"
+propTable1 <- filter(propTable, nCell == 1)
 
-ggplot(propTable[-1,], aes(x="", y=size, fill=component)) +
-  geom_bar(stat="identity", width=1, color="white") +
+propTable16 <- filter(propTable, nCell == 16)
+
+plotProp1 <- ggplot(propTable1, aes(x = "", y = size, fill = component)) +
+  geom_bar(stat = "identity", width=1, color="white") +
   coord_polar("y", start=0) +
   theme_void()
 
-fig <- plot_ly(propTable[-1,], labels = ~component, values = ~size, type = 'pie')
+plotProp16 <- ggplot(propTable16, aes(x = "", y = size, fill = component)) +
+  geom_bar(stat = "identity", width=1, color="white") +
+  coord_polar("y", start=0) +
+  theme_void()
 
-fig <- fig %>% layout(title = 'ratio of the different components of a QFeatures',
+plotProp1 + plotProp16
+
+
+fig1 <- plot_ly(propTable1, labels = ~component, values = ~size, type = 'pie')
+
+fig1 <- fig1 %>% layout(title = 'nCell = 1',
 
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
 
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-fig
+fig1
+
+fig16 <- plot_ly(propTable16, labels = ~component, values = ~size, type = 'pie')
+
+fig16 <- fig16 %>% layout(title = 'nCell = 16',
+
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+fig16
+```
+
+```{r}
+plot3Ddata <- sizeTable %>% 
+  filter(nCol == 50)
+plot_ly(x=plot3Ddata$nCell, y=plot3Ddata$nAssay, z=plot3Ddata$nFeat, type="scatter3d", mode="markers", color=plot3Ddata$sizeTotal_MiB)
+    
+```
+
+```{r}
+sizeTable %>% 
+  ggpairs(columns = c("sizeTotal_MiB", "nCell", "nAssay","nFeat", "nCol"))
+
+summary(lm(data = sizeTable, formula = sizeTotal_MiB ~ nCell * nAssay * nFeat * nCol))
 ```
 
