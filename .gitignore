@@ -3,6 +3,7 @@
 .RData
 .Ruserdata
 *.Rproj
+.RDataTmp
 
 dataOutput/hela/*
 tmp/

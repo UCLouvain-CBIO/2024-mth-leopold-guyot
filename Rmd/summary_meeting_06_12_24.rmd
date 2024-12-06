@@ -277,6 +277,18 @@ ggplotly(ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) +
 - The assay joining is also a bottleneck (also a linear time complexity)
   - Profile
 
+
+Object size 4000:
+  - Total: 7.7 GB
+  - colData 1041360 bytes
+  - assay 3743666144
+  - rowData 2914365904
+  
+  - peptide : 90979 rows and 3996 columns
+  - peptides: 2954189576 bytes => 2.8 GB
+  - proteins: 0.4 GB
+  
+  => problem with the peptide assay
 ## Peak RAM by step
 ```{r heatMapRAM}
 convert_mib_to_gb <- function(mib) {
