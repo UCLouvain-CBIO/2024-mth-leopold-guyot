@@ -173,8 +173,8 @@ subsetByColDataCopy3 <- function(x, y) {
 profvis::profvis(subsetByColDataCopy3(PSM1000, PSM1000$filterBench > 1))
 
 PSM4000 <- generateTMTPSM(leduc, 4000)
-microbenchmark(subsetByColDataCopy(PSM2000, PSM2000$filterBench > 1),
-               subsetByColDataCopy2(PSM2000, PSM2000$filterBench > 1),
-               subsetByColDataCopy3(PSM2000, PSM2000$filterBench > 1),
+microbenchmark(subsetByColDataCopy(PSM4000, PSM4000$filterBench > 1),
+               subsetByColDataCopy2(PSM4000, PSM4000$filterBench > 1),
+               subsetByColDataCopy3(PSM4000, PSM4000$filterBench > 1),
                times = 3,
                check = "equal")
