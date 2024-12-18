@@ -81,7 +81,7 @@ new <- new %>%
 combined <- bind_rows(old, new) %>%
     mutate(median_time = as.numeric(median_time), # in seconds
            mem_alloc = as.numeric(sub("MB", "",
-                                      as.character(combined$mem_alloc))))
+                                      as.character(mem_alloc))))
 
 
 write.csv(combined, file = "dataOutput/benchmark_subsetByColData_opti.csv")
