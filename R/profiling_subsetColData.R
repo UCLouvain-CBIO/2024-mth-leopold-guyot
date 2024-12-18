@@ -150,13 +150,11 @@ subsetByColDataCopy3 <- function(x, y) {
              call. = FALSE)
     newcoldata <- coldata[y, , drop = FALSE]
     listMap <- mapToList(sampleMap(x), "assay")
-    assaysName <- names(listMap)
-    listMap <- lapply(assaysName, function(assayName) {
-        .matchReorderSubCopy(listMap[[assayName]],
+    listMap <- lapply(listMap, function(elementMap) {
+        .matchReorderSubCopy(elementMap,
                              intersect(rownames(newcoldata),
-                                       listMap[[assayName]]$colname))
+                                       elementMap$primary))
     })
-    names(listMap) <- assaysName
     newMap <- listToMap(listMap, fill = FALSE)
     columns <- lapply(listMap, function(mapChunk) {
         mapChunk[, "colname", drop = TRUE]
@@ -176,5 +174,4 @@ PSM4000 <- generateTMTPSM(leduc, 4000)
 microbenchmark(subsetByColDataCopy(PSM4000, PSM4000$filterBench > 1),
                subsetByColDataCopy2(PSM4000, PSM4000$filterBench > 1),
                subsetByColDataCopy3(PSM4000, PSM4000$filterBench > 1),
-               times = 3,
-               check = "equal")
+               times = 3)
