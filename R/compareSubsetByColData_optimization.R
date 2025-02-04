@@ -50,7 +50,7 @@ runPress <- function(git, nAssays, rep = 3L) {
 
             tibble::tibble(
                 expression = as.character(results$expression),
-                median_time = results$median, # Convert to milliseconds
+                median_time = results$median,
                 mem_alloc = results$mem_alloc
             )
         }
@@ -85,3 +85,36 @@ combined <- bind_rows(old, new) %>%
 
 
 write.csv(combined, file = "dataOutput/benchmark_subsetByColData_opti.csv")
+
+
+combined <- read.csv("dataOutput/benchmark_subsetByColData_opti.csv")
+
+library(tidyr)
+library(ggplot2)
+library(plotly)
+plotTime <- combined %>%
+    mutate(
+        nCol =nAssays*18,
+        nAssays = as.factor(nAssays)) %>%
+    ggplot(aes(x = nCol, y = median_time, color = version))+
+        xlab("Total number of columns")+
+        ylab("RunTime (s)")+
+        geom_point()+
+        geom_smooth()+
+        facet_wrap(~expression)
+
+ggplotly(plotTime)
+
+plotMem <- combined %>%
+    mutate(
+        nCol = nAssays*18,
+        nAssays = as.factor(nAssays),
+        mem_alloc_MB = mem_alloc/(1024**2)) %>%
+    ggplot(aes(x = nCol, y = mem_alloc_MB, color = version))+
+    xlab("Total number of columns")+
+    ylab("RAM used (MB)")+
+    geom_point()+
+    geom_smooth()+
+    facet_wrap(~expression)
+
+ggplotly(plotMem)
