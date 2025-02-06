@@ -4,7 +4,7 @@ library(QFeatures)
 px <- PXDataset("PXD042233")
 url <- pxurl(px)
 files <- grep("Orbitrap.*zip", pxfiles(px), value = TRUE)
-files <- files[1:200]
+files <- files[1:1500]
 
 sampleAnnot <- pxget(px, "Experimental-Design.sdrf.tsv")
 sampleAnnot <- DataFrame(read.delim(sampleAnnot))
