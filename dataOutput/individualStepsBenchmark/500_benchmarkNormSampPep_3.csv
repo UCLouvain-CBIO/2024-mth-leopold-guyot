@@ -1,3 +1,0 @@
-"","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
-"1","qfeaturesAfter<-stepsPep[[stepPep]](qfeatures)",1.20400000000154,-8.29999999999995,335.9
-"2","write.table(data.frame(nCell=as.integer(size),rep=as.integer(i),step=stepPep,sizeTotalBefore=qfeaturesTotalSizeBefore,sizeTotalAfter=object.size(qfeaturesAfter),sizeAssayBefore=qfeaturesAssaySizeBefore,sizeAssayAfter=getAssaySize(qfeaturesAfter),sizeRowDataBefore=qfeaturesRowDataSizeBefore,sizeRowDataAfter=getRowDataSize(qfeaturesAfter),sizeColDataBefore=qfeaturesColDataSizeBefore,sizeColDataAfter=getColDataSize(qfeaturesAfter)),file=file.path(destPath,""qfeatures_size_report.tsv""),append=TRUE,col.names=FALSE,row.names=FALSE)",0.845000000001164,0,245.3

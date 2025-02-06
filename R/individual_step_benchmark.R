@@ -7,9 +7,8 @@ source(file.path("R", "utils.R"))
 
 # Variables
 destPath <- file.path("dataOutput", "individualStepsBenchmark")
-replicate <- 3
+replicate <- 1
 sizes <- c(500, 1000, 2000, 4000)
-
 
 benchmarkFilterFeatures <- function(qfeatures) {
     filterFeatures(qfeatures, ~ filterBench > 1)
@@ -130,7 +129,8 @@ write.table(
         sizeRowDataBefore = numeric(),
         sizeRowDataAfter = numeric(),
         sizeColDataBefore = numeric(),
-        sizeColDataAfter = numeric()
+        sizeColDataAfter = numeric(),
+        nFeat = integer()
     ),
     file = file.path(destPath, "qfeatures_size_report.tsv"),
     append = FALSE,
@@ -144,6 +144,7 @@ leduc <- scpdata::leduc2022_pSCoPE()
 for (i in 1:replicate) {
     for (size in sizes) {
         print(paste0("Starting dataset of size: ", size, " replicate no: ", i))
+
         qfeatures <- generateTMTPSM(leduc, size)
         qfeaturesTotalSizeBefore <- object.size(qfeatures)
         qfeaturesAssaySizeBefore <- getAssaySize(qfeatures)
@@ -175,7 +176,8 @@ for (i in 1:replicate) {
                                 sizeRowDataBefore = qfeaturesRowDataSizeBefore,
                                 sizeRowDataAfter = getRowDataSize(qfeaturesAfter),
                                 sizeColDataBefore = qfeaturesColDataSizeBefore,
-                                sizeColDataAfter = getColDataSize(qfeaturesAfter)
+                                sizeColDataAfter = getColDataSize(qfeaturesAfter),
+                                nFeat = NA
                             ),
                             file = file.path(destPath, "qfeatures_size_report.tsv"),
                             append = TRUE,
@@ -187,11 +189,18 @@ for (i in 1:replicate) {
                 )
             )
         }
+        qfeatures <- filterFeatures(qfeatures, ~ Potential.contaminant != "+" &
+                                        !grepl("CON", Proteins) &
+                                        Reverse != "+" &
+                                        !grepl("REV", Leading.razor.protein) &
+                                        (is.na(PIF) | PIF > 0.6) &
+                                        dart_qval < 0.01)
         qfeatures <- generateTMTPeptides(qfeatures)
         qfeaturesTotalSizeBefore <- object.size(qfeatures)
         qfeaturesAssaySizeBefore <- getAssaySize(qfeatures)
         qfeaturesRowDataSizeBefore <- getRowDataSize(qfeatures)
         qfeaturesColDataSizeBefore <- getColDataSize(qfeatures)
+        qfeaturesNPep <- nrow(qfeatures[["peptides"]])
         for (stepPep in names(stepsPep)) {
             destFile <- file.path(
                 destPath,
@@ -213,7 +222,8 @@ for (i in 1:replicate) {
                                 sizeRowDataBefore = qfeaturesRowDataSizeBefore,
                                 sizeRowDataAfter = getRowDataSize(qfeaturesAfter),
                                 sizeColDataBefore = qfeaturesColDataSizeBefore,
-                                sizeColDataAfter = getColDataSize(qfeaturesAfter)
+                                sizeColDataAfter = getColDataSize(qfeaturesAfter),
+                                nFeat = qfeaturesNPep
                             ),
                             file = file.path(destPath, "qfeatures_size_report.tsv"),
                             append = TRUE,
@@ -251,7 +261,8 @@ for (i in 1:replicate) {
                                 sizeRowDataBefore = qfeaturesRowDataSizeBefore,
                                 sizeRowDataAfter = getRowDataSize(qfeaturesAfter),
                                 sizeColDataBefore = qfeaturesColDataSizeBefore,
-                                sizeColDataAfter = getColDataSize(qfeaturesAfter)
+                                sizeColDataAfter = getColDataSize(qfeaturesAfter),
+                                nFeat = nrow(qfeatures[["proteins"]])
                             ),
                             file = file.path(destPath, "qfeatures_size_report.tsv"),
                             append = TRUE,
