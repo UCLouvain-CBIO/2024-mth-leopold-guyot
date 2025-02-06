@@ -32,7 +32,6 @@ sizeTable <- read.table(fileSizeReport, header = TRUE)
 
 peakRamTable <- do.call(rbind, lapply(stepDataList, as.data.frame))
 peakRamTable <- separate(peakRamTable, name, into = c("nCell", "step", "replicate"), sep = "_")
-
 ```
 
 # Heatmap of time elapsed by number of cells and steps
@@ -49,26 +48,33 @@ step_order <- c(
     "benchmarkNormFeatPep",
     "benchmarkLogPep",
     "benchmarkAggPep",
-    "benchmarkImputePro")
+    "benchmarkImputePro"
+)
 
-timeMedian <- peakRamTable %>% 
-    group_by(nCell, step) %>% 
-    summarise(medianTimeElasped = median(Elapsed_Time_sec)) %>% 
-    ungroup() %>% 
-    mutate(nCell = factor(nCell, levels = nCell_order),
-           step = factor(step, levels = rev(step_order)))
+timeMedian <- peakRamTable %>%
+    group_by(nCell, step) %>%
+    summarise(medianTimeElasped = median(Elapsed_Time_sec)) %>%
+    ungroup() %>%
+    mutate(
+        nCell = factor(nCell, levels = nCell_order),
+        step = factor(step, levels = rev(step_order))
+    )
 
 
-ggplotly(ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) + 
+ggplotly(ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) +
     geom_tile() +
-        scale_fill_gradient2(low = "blue", mid = "white", high = "red",
-                                midpoint = median(peakRamTable$Elapsed_Time_sec, na.rm = TRUE)))
+    scale_fill_gradient2(
+        low = "blue", mid = "white", high = "red",
+        midpoint = median(peakRamTable$Elapsed_Time_sec, na.rm = TRUE)
+    ))
 
-ggplotly(ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) + 
+ggplotly(ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) +
     geom_tile() +
-        scale_fill_gradient2(low = "blue", mid = "white", high = "red",
-                                midpoint = median(peakRamTable$Elapsed_Time_sec, na.rm = TRUE),
-                                transform = "log2"))
+    scale_fill_gradient2(
+        low = "blue", mid = "white", high = "red",
+        midpoint = median(peakRamTable$Elapsed_Time_sec, na.rm = TRUE),
+        transform = "log2"
+    ))
 DT::datatable(timeMedian)
 ```
 
@@ -76,25 +82,31 @@ DT::datatable(timeMedian)
 
 ```{r heatmapPeakRam}
 convert_mib_to_gb <- function(mib) {
-  gb <- mib * 0.001024
-  return(gb)
+    gb <- mib * 0.001024
+    return(gb)
 }
-peakRamMedian <- peakRamTable %>% 
-    group_by(nCell, step) %>% 
-    summarise(medianPeakRam = median(Peak_RAM_Used_MiB)) %>% 
-    ungroup() %>% 
-    mutate(nCell = factor(nCell, levels = nCell_order),
-           step = factor(step, levels = rev(step_order)))
-ggplotly(ggplot(peakRamMedian, aes(nCell, step, fill = medianPeakRam)) + 
+peakRamMedian <- peakRamTable %>%
+    group_by(nCell, step) %>%
+    summarise(medianPeakRam = median(Peak_RAM_Used_MiB)) %>%
+    ungroup() %>%
+    mutate(
+        nCell = factor(nCell, levels = nCell_order),
+        step = factor(step, levels = rev(step_order))
+    )
+ggplotly(ggplot(peakRamMedian, aes(nCell, step, fill = medianPeakRam)) +
     geom_tile() +
-        scale_fill_gradient2(low = "blue", mid = "white", high = "red",
-                                midpoint = median(peakRamTable$Peak_RAM_Used_MiB, na.rm = TRUE)))
+    scale_fill_gradient2(
+        low = "blue", mid = "white", high = "red",
+        midpoint = median(peakRamTable$Peak_RAM_Used_MiB, na.rm = TRUE)
+    ))
 
-ggplotly(ggplot(peakRamMedian, aes(nCell, step, fill = medianPeakRam)) + 
+ggplotly(ggplot(peakRamMedian, aes(nCell, step, fill = medianPeakRam)) +
     geom_tile() +
-        scale_fill_gradient2(low = "blue", mid = "white", high = "red",
-                                midpoint = median(peakRamTable$Peak_RAM_Used_MiB, na.rm = TRUE),
-                                transform = "log2"))
+    scale_fill_gradient2(
+        low = "blue", mid = "white", high = "red",
+        midpoint = median(peakRamTable$Peak_RAM_Used_MiB, na.rm = TRUE),
+        transform = "log2"
+    ))
 DT::datatable(peakRamMedian)
 ```
 
@@ -102,45 +114,53 @@ DT::datatable(peakRamMedian)
 
 ```{r heatmapSize}
 convert_bytes_to_mib <- function(bytes) {
-  mib <- bytes / (2^20)
-  return(mib)
+    mib <- bytes / (2^20)
+    return(mib)
 }
 
-sizeDiff <- sizeTable %>% 
-    group_by(nCell, step) %>% 
-    summarise(medianSizeBefore = median(sizeTotalBefore),
-              medianSizeAfter = median(sizeTotalAfter)) %>%
-    mutate(medianSizeDiffMiB = convert_bytes_to_mib(medianSizeAfter - medianSizeBefore)) %>% 
-    ungroup() %>% 
-    mutate(nCell = factor(nCell, levels = nCell_order),
-           step = factor(step, levels = rev(step_order)))
+sizeDiff <- sizeTable %>%
+    group_by(nCell, step) %>%
+    summarise(
+        medianSizeBefore = median(sizeTotalBefore),
+        medianSizeAfter = median(sizeTotalAfter)
+    ) %>%
+    mutate(medianSizeDiffMiB = convert_bytes_to_mib(medianSizeAfter - medianSizeBefore)) %>%
+    ungroup() %>%
+    mutate(
+        nCell = factor(nCell, levels = nCell_order),
+        step = factor(step, levels = rev(step_order))
+    )
 
 ggplotly(ggplot(sizeDiff, aes(nCell, step, fill = medianSizeDiffMiB)) +
     geom_tile() +
-        scale_fill_gradient2(low = "blue", mid = "white", high = "red"))
+    scale_fill_gradient2(low = "blue", mid = "white", high = "red"))
 DT::datatable(sizeDiff)
 ```
 
 ```{r heatmapComponentSize}
 convert_bytes_to_mib <- function(bytes) {
-  mib <- bytes / (2^20)
-  return(mib)
+    mib <- bytes / (2^20)
+    return(mib)
 }
 
 sizeComponentDiff <- sizeTable %>%
-    filter(nCell == 4000) %>% 
-    group_by(step) %>% 
-    summarise(medianDiffAssay = convert_bytes_to_mib(median(sizeAssayAfter - sizeAssayBefore)),
-              medianDiffRowData = convert_bytes_to_mib(median(sizeRowDataAfter - sizeRowDataBefore)),
-              medianDiffColData = convert_bytes_to_mib(median(sizeColDataAfter - sizeColDataBefore))) %>%
-    ungroup() %>% 
-    pivot_longer(cols = c(medianDiffAssay, medianDiffRowData, medianDiffColData),
-                 names_to = "component", values_to = "medianSizeMiB") %>% 
+    filter(nCell == 4000) %>%
+    group_by(step) %>%
+    summarise(
+        medianDiffAssay = convert_bytes_to_mib(median(sizeAssayAfter - sizeAssayBefore)),
+        medianDiffRowData = convert_bytes_to_mib(median(sizeRowDataAfter - sizeRowDataBefore)),
+        medianDiffColData = convert_bytes_to_mib(median(sizeColDataAfter - sizeColDataBefore))
+    ) %>%
+    ungroup() %>%
+    pivot_longer(
+        cols = c(medianDiffAssay, medianDiffRowData, medianDiffColData),
+        names_to = "component", values_to = "medianSizeMiB"
+    ) %>%
     mutate(step = factor(step, levels = rev(step_order)))
 
 ggplotly(ggplot(sizeComponentDiff, aes(component, step, fill = medianSizeMiB)) +
     geom_tile() +
-        scale_fill_gradient2(low = "blue", mid = "white", high = "red"))
+    scale_fill_gradient2(low = "blue", mid = "white", high = "red"))
 
 DT::datatable(sizeComponentDiff)
 ```
@@ -148,11 +168,12 @@ DT::datatable(sizeComponentDiff)
 # Variation in run time by step
 
 ```{r}
-
 peakRamTableOrdered <- peakRamTable %>%
-    mutate(step = factor(step, levels = rev(step_order)),
-           nCell = as.integer(nCell)) %>% 
-    group_by(nCell, step) %>% 
+    mutate(
+        step = factor(step, levels = rev(step_order)),
+        nCell = as.integer(nCell)
+    ) %>%
+    group_by(nCell, step) %>%
     summarise("medianTimeSec" = median(Elapsed_Time_sec))
 
 ggplotly(ggplot(peakRamTableOrdered, aes(x = nCell, y = medianTimeSec)) +

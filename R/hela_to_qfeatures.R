@@ -12,7 +12,7 @@ sampleAnnot$runCol <- sampleAnnot$source.name
 sampleAnnot$quantCols <- rep("Intensity", nrow(sampleAnnot))
 rownames(sampleAnnot) <- sampleAnnot$source.name
 
-if (dir.exists("data/hela/rawData")){
+if (dir.exists("data/hela/rawData")) {
     unlink("data/hela/rawData", recursive = TRUE)
 }
 
@@ -24,15 +24,16 @@ for (zip in sucess$destfile) {
     unzip(zip, files = file.path(baseName, "evidence.txt"), exdir = "data/hela/rawData")
     file.remove(zip)
 }
-SEList <- lapply(list.files("data/hela/rawData"), function(dir){
-    fullPath <- file.path("data/hela/rawData", dir, "evidence.txt") 
+SEList <- lapply(list.files("data/hela/rawData"), function(dir) {
+    fullPath <- file.path("data/hela/rawData", dir, "evidence.txt")
     quantTable <- read.delim(fullPath)
     quantTable$PSMid <- paste0(dir, "_PSM", seq(nrow(quantTable)))
     quantTable$runCol <- rep(dir, nrow(quantTable))
     rownames(quantTable) <- quantTable$PSMid
     SE <- readSummarizedExperiment(quantTable,
-                                   quantCols = "Intensity",
-                                   fnames = "PSMid")
+        quantCols = "Intensity",
+        fnames = "PSMid"
+    )
     colnames(SE) <- baseName
     SE
 })

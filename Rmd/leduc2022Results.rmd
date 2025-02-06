@@ -22,33 +22,47 @@ library(plotly)
 
 ```{r dataLoading}
 inputDir <- "dataOutput/vignetteBenchmark"
-objectSize <- read.table(file = file.path(inputDir, "size_report.tsv"),
-                         header = TRUE)
+objectSize <- read.table(
+    file = file.path(inputDir, "size_report.tsv"),
+    header = TRUE
+)
 objectSize$nCell <- as.factor(objectSize$nCell)
 objectSize$rep <- as.factor(objectSize$rep)
 
-dataFrames <- lapply(list.files(path = file.path(inputDir,
-                                                 "memoryOutput"),
-                                                 full.names = TRUE),
-       function(x){
-            df <- read.csv(x)
-            total_time <- sum(df$Elapsed_Time_sec, na.rm = TRUE)
-            df %>% 
-                mutate(ratioTime = Elapsed_Time_sec / total_time)
-       })
-names(dataFrames) <- list.files(path = file.path(inputDir,"memoryOutput"), full.names = FALSE)
+dataFrames <- lapply(
+    list.files(
+        path = file.path(
+            inputDir,
+            "memoryOutput"
+        ),
+        full.names = TRUE
+    ),
+    function(x) {
+        df <- read.csv(x)
+        total_time <- sum(df$Elapsed_Time_sec, na.rm = TRUE)
+        df %>%
+            mutate(ratioTime = Elapsed_Time_sec / total_time)
+    }
+)
+names(dataFrames) <- list.files(path = file.path(inputDir, "memoryOutput"), full.names = FALSE)
 names(dataFrames) <- gsub(pattern = ".csv", replacement = "", x = names(dataFrames))
 
 benchmarkDF <- bind_rows(dataFrames, .id = "run")
-benchmarkDF <- separate_wider_delim(data = benchmarkDF, cols = c("run"), delim = "_",
-                          names = c("nCell", "replicate"))
+benchmarkDF <- separate_wider_delim(
+    data = benchmarkDF, cols = c("run"), delim = "_",
+    names = c("nCell", "replicate")
+)
 
-benchmarkDF$vignette_step <- gsub(pattern = "(.*leduc)(.*)([.,/(]leduc.*)",
-                                  replacement = "\\2",
-                                  x = benchmarkDF$Function_Call)
-irrelevantIndices <- c(grep("write.table", benchmarkDF$vignette_step),
-                       grep("assaysNames", benchmarkDF$vignette_step))
-benchmarkDF <- benchmarkDF[-irrelevantIndices,]
+benchmarkDF$vignette_step <- gsub(
+    pattern = "(.*leduc)(.*)([.,/(]leduc.*)",
+    replacement = "\\2",
+    x = benchmarkDF$Function_Call
+)
+irrelevantIndices <- c(
+    grep("write.table", benchmarkDF$vignette_step),
+    grep("assaysNames", benchmarkDF$vignette_step)
+)
+benchmarkDF <- benchmarkDF[-irrelevantIndices, ]
 ```
 
 
@@ -58,7 +72,8 @@ benchmarkDF <- benchmarkDF[-irrelevantIndices,]
 plotSize <- objectSize %>%
     group_by(nCell) %>%
     summarise(sizeGB = mean(size) / (1024^3)) %>% # Divide by 1024^3 to get GB
-    ggplot(aes(x = nCell, y = sizeGB, fill = nCell)) + geom_col()
+    ggplot(aes(x = nCell, y = sizeGB, fill = nCell)) +
+    geom_col()
 
 ggplotly(plotSize)
 ```
@@ -70,11 +85,11 @@ plotTime <- benchmarkDF %>%
     # Convert `nCell` to a factor with levels ordered numerically
     mutate(nCell = factor(nCell, levels = sort(as.numeric(unique(nCell))))) %>%
     group_by(nCell, replicate) %>%
-    summarise(time = sum(Elapsed_Time_sec)/60) %>%
-    ggplot(aes(x = nCell, y = time, color = nCell)) + geom_boxplot()
+    summarise(time = sum(Elapsed_Time_sec) / 60) %>%
+    ggplot(aes(x = nCell, y = time, color = nCell)) +
+    geom_boxplot()
 
 ggplotly(plotTime)
-
 ```
 
 
@@ -83,17 +98,16 @@ ggplotly(plotTime)
 ```{r peakBenchmark}
 plotPeak <- benchmarkDF %>%
     group_by(nCell, replicate) %>%
-    summarise(peak = max(Peak_RAM_Used_MiB) / 1024, .groups = 'drop') %>%  # Convert to GB
-    group_by(nCell) %>% 
-    summarise(peak = mean(peak), .groups = 'drop') %>%
+    summarise(peak = max(Peak_RAM_Used_MiB) / 1024, .groups = "drop") %>% # Convert to GB
+    group_by(nCell) %>%
+    summarise(peak = mean(peak), .groups = "drop") %>%
     mutate(nCell = factor(nCell, levels = sort(as.numeric(unique(nCell))))) %>%
-    ggplot(aes(x = nCell, y = peak, fill = nCell)) + 
+    ggplot(aes(x = nCell, y = peak, fill = nCell)) +
     geom_col() +
     labs(y = "Peak RAM Used (GB)") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplotly(plotPeak)
-
 ```
 
 ## Mean Time percentage of each step
@@ -101,15 +115,17 @@ ggplotly(plotPeak)
 ```{r ratioBenchmark}
 plotRatio <- benchmarkDF %>%
     group_by(vignette_step) %>%
-    summarise(meanTimePercentage = mean(ratioTime)*100) %>%
-    arrange(desc(meanTimePercentage)) %>% 
+    summarise(meanTimePercentage = mean(ratioTime) * 100) %>%
+    arrange(desc(meanTimePercentage)) %>%
     mutate(vignette_step = factor(vignette_step, levels = vignette_step)) %>%
     ggplot(aes(x = vignette_step, y = meanTimePercentage)) +
-        geom_bar(stat = "identity") + 
-        labs(title = "Proportion of vignette_step by meanTimePercentage",
-             y = "Percentage of time taken (average)", x = "Vignette Step") +
-        theme_minimal() + 
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    geom_bar(stat = "identity") +
+    labs(
+        title = "Proportion of vignette_step by meanTimePercentage",
+        y = "Percentage of time taken (average)", x = "Vignette Step"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
 ggplotly(plotRatio)
 ```
@@ -118,17 +134,19 @@ ggplotly(plotRatio)
 
 ```{r ratio1000}
 plotRatio1000 <- benchmarkDF %>%
-    filter(nCell == "1000") %>% 
+    filter(nCell == "1000") %>%
     group_by(vignette_step) %>%
-    summarise(meanTimePercentage = mean(ratioTime)*100) %>%
-    arrange(desc(meanTimePercentage)) %>% 
+    summarise(meanTimePercentage = mean(ratioTime) * 100) %>%
+    arrange(desc(meanTimePercentage)) %>%
     mutate(vignette_step = factor(vignette_step, levels = vignette_step)) %>%
     ggplot(aes(x = vignette_step, y = meanTimePercentage)) +
-        geom_bar(stat = "identity") + 
-        labs(title = "Proportion of vignette_step by meanTimePercentage",
-             y = "Percentage of time taken (average)", x = "Vignette Step") +
-        theme_minimal() + 
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    geom_bar(stat = "identity") +
+    labs(
+        title = "Proportion of vignette_step by meanTimePercentage",
+        y = "Percentage of time taken (average)", x = "Vignette Step"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
 ggplotly(plotRatio1000)
 ```
@@ -137,17 +155,19 @@ ggplotly(plotRatio1000)
 
 ```{r ratio16000}
 plotRatio16000 <- benchmarkDF %>%
-    filter(nCell == "16000") %>% 
+    filter(nCell == "16000") %>%
     group_by(vignette_step) %>%
-    summarise(meanTimePercentage = mean(ratioTime)*100) %>%
-    arrange(desc(meanTimePercentage)) %>% 
+    summarise(meanTimePercentage = mean(ratioTime) * 100) %>%
+    arrange(desc(meanTimePercentage)) %>%
     mutate(vignette_step = factor(vignette_step, levels = vignette_step)) %>%
     ggplot(aes(x = vignette_step, y = meanTimePercentage)) +
-        geom_bar(stat = "identity") + 
-        labs(title = "Proportion of vignette_step by meanTimePercentage",
-             y = "Percentage of time taken (average)", x = "Vignette Step") +
-        theme_minimal() + 
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    geom_bar(stat = "identity") +
+    labs(
+        title = "Proportion of vignette_step by meanTimePercentage",
+        y = "Percentage of time taken (average)", x = "Vignette Step"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
 ggplotly(plotRatio16000)
 ```
@@ -155,5 +175,7 @@ ggplotly(plotRatio16000)
 ## Hardware and software
 
 ```{r, echo = FALSE, message = FALSE}
-readLines(file.path(inputDir, "hardware_software.txt")) %>% paste0(collapse="\n") %>% cat
+readLines(file.path(inputDir, "hardware_software.txt")) %>%
+    paste0(collapse = "\n") %>%
+    cat()
 ```

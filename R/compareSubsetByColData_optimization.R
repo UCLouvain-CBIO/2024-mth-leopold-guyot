@@ -10,7 +10,7 @@ runBench <- function(git, rep = 3L) {
     qfeatures <- leduc2022_pSCoPE()
     colData(qfeatures)$filterBench <- rnorm(nrow(colData(qfeatures)), mean = 1, sd = 1)
     bench::mark(
-        result = qfeatures[, qfeatures$filterBench > 1,],
+        result = qfeatures[, qfeatures$filterBench > 1, ],
         iterations = rep
     )
 }
@@ -42,9 +42,9 @@ runPress <- function(git, nAssays, rep = 3L) {
         nAssays = nAssays,
         rep = 1:3,
         {
-            subqfeatures <- qfeatures[,, 1:nAssays]
+            subqfeatures <- qfeatures[, , 1:nAssays]
             results <- bench::mark(
-                bracket = subqfeatures[, subqfeatures$filterBench > 1,],
+                bracket = subqfeatures[, subqfeatures$filterBench > 1, ],
                 subset = subsetByColData(subqfeatures, subqfeatures$filterBench > 1)
             )
 
@@ -59,16 +59,20 @@ runPress <- function(git, nAssays, rep = 3L) {
 
 new <- callr::r(
     func = runPress,
-    args = list(git = "leopoldguyot/MultiAssayExperiment@subsetByColData_optimization",
-                nAssays = c(5, 20, 50, 80, 120),
-                rep = 3L)
+    args = list(
+        git = "leopoldguyot/MultiAssayExperiment@subsetByColData_optimization",
+        nAssays = c(5, 20, 50, 80, 120),
+        rep = 3L
+    )
 )
 
 old <- callr::r(
     func = runPress,
-    args = list(git = "waldronlab/MultiAssayExperiment@325c85ca26582027bcdd643df673a06ae649a36b",
-                nAssays = c(5, 20, 50, 80, 120),
-                rep = 3L)
+    args = list(
+        git = "waldronlab/MultiAssayExperiment@325c85ca26582027bcdd643df673a06ae649a36b",
+        nAssays = c(5, 20, 50, 80, 120),
+        rep = 3L
+    )
 )
 
 
@@ -79,9 +83,13 @@ new <- new %>%
     mutate(version = "New")
 
 combined <- bind_rows(old, new) %>%
-    mutate(median_time = as.numeric(median_time), # in seconds
-           mem_alloc = as.numeric(sub("MB", "",
-                                      as.character(mem_alloc))))
+    mutate(
+        median_time = as.numeric(median_time), # in seconds
+        mem_alloc = as.numeric(sub(
+            "MB", "",
+            as.character(mem_alloc)
+        ))
+    )
 
 
 write.csv(combined, file = "dataOutput/benchmark_subsetByColData_opti.csv")
@@ -94,27 +102,29 @@ library(ggplot2)
 library(plotly)
 plotTime <- combined %>%
     mutate(
-        nCol =nAssays*18,
-        nAssays = as.factor(nAssays)) %>%
-    ggplot(aes(x = nCol, y = median_time, color = version))+
-        xlab("Total number of columns")+
-        ylab("RunTime (s)")+
-        geom_point()+
-        geom_smooth()+
-        facet_wrap(~expression)
+        nCol = nAssays * 18,
+        nAssays = as.factor(nAssays)
+    ) %>%
+    ggplot(aes(x = nCol, y = median_time, color = version)) +
+    xlab("Total number of columns") +
+    ylab("RunTime (s)") +
+    geom_point() +
+    geom_smooth() +
+    facet_wrap(~expression)
 
 ggplotly(plotTime)
 
 plotMem <- combined %>%
     mutate(
-        nCol = nAssays*18,
+        nCol = nAssays * 18,
         nAssays = as.factor(nAssays),
-        mem_alloc_MB = mem_alloc/(1024**2)) %>%
-    ggplot(aes(x = nCol, y = mem_alloc_MB, color = version))+
-    xlab("Total number of columns")+
-    ylab("RAM used (MB)")+
-    geom_point()+
-    geom_smooth()+
+        mem_alloc_MB = mem_alloc / (1024**2)
+    ) %>%
+    ggplot(aes(x = nCol, y = mem_alloc_MB, color = version)) +
+    xlab("Total number of columns") +
+    ylab("RAM used (MB)") +
+    geom_point() +
+    geom_smooth() +
     facet_wrap(~expression)
 
 ggplotly(plotMem)

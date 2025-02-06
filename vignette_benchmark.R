@@ -14,5 +14,4 @@ start <- Sys.time()
 leduc2022BenchmarkDetails(c(1000, 2000, 4000, 8000, 16000), 3)
 end <- Sys.time()
 
-print(start-end)
-
+print(start - end)

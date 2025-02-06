@@ -15,8 +15,9 @@ library(peakRAM)
 ```{r}
 start <- Sys.time()
 timeTest <- peakRAM(
-        Sys.sleep(2),
-        Sys.sleep(1))
+    Sys.sleep(2),
+    Sys.sleep(1)
+)
 end <- Sys.time()
 !any(!(timeTest$Elapsed_Time_sec - c(2, 1) <= 1e-2))
 print(end - start)
@@ -34,26 +35,28 @@ First we create an object of a fixed size. Then we use this object in two case, 
 makeCopyControl <- function(object) {
     return(object)
 }
-makeCopy1 <- function(object){
+makeCopy1 <- function(object) {
     object1 <- object + 0
     return(list(object1, object))
 }
 
-makeCopy2 <- function(object){
+makeCopy2 <- function(object) {
     object1 <- object + 0
     return(object)
 }
-
 ```
 
 ```{r} 
 object <- numeric(100000000) # 48 + 100000000*8 = 800000048 bytes
 cat("Initial object size:", utils:::format.object_size(object.size(object),
-                                                       units = "MiB"))
+    units = "MiB"
+))
 
-peakRAM(makeCopyControl(object),
-        makeCopy1(object),
-        makeCopy2(object))
+peakRAM(
+    makeCopyControl(object),
+    makeCopy1(object),
+    makeCopy2(object)
+)
 ```
 We can see that for the control expression that do not produce any object and returns the orignal object, the `Total_RAM_Used_MiB` and `Peak_RAM_Used_MiB` are both equal to 0. For the second expression that makes a copy within the function and return this copy, we can see that `Total_RAM_Used_MiB` and `Peak_RAM_Used_MiB` are now equal to the size of this copy. In the third case that copy the object but does not return it, the `Total_RAM_Used_MiB` is equal to 0 while the `Peak_RAM_Used_MiB` is equal to the copy size.
 
@@ -63,14 +66,14 @@ before <- gc(reset = TRUE)
 test <- makeCopyControl(object)
 after <- gc()
 
-after - before 
+after - before
 
 rm(test)
 before <- gc(reset = TRUE)
 test <- makeCopy1(object)
 after <- gc()
 
-after - before 
+after - before
 
 rm(test)
 

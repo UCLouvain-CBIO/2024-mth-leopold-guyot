@@ -27,43 +27,43 @@
 #'
 #' @export
 profilingExecution <- function(nFeaturesRange = c(500, 1000),
-                               nRunsRange = c(4, 8),
-                               naRateRange = c(0.4, 0.6),
-                               nReplicates = 1,
-                               profilingTemp = "profilingTemp",
-                               outputFolder = "dataOutput/profilingResults") {
-  # Ensure temp files are cleaned on exit
-  on.exit({
-    Rprof(NULL)
-    unlink(profilingTemp, recursive = TRUE)
-    cat("Temporary files cleaned up.\n")
-  })
+    nRunsRange = c(4, 8),
+    naRateRange = c(0.4, 0.6),
+    nReplicates = 1,
+    profilingTemp = "profilingTemp",
+    outputFolder = "dataOutput/profilingResults") {
+    # Ensure temp files are cleaned on exit
+    on.exit({
+        Rprof(NULL)
+        unlink(profilingTemp, recursive = TRUE)
+        cat("Temporary files cleaned up.\n")
+    })
 
-  ### Data Generation ###
-  ### TMT ###
+    ### Data Generation ###
+    ### TMT ###
 
-  replicateData(
-    nFeaturesRange = nFeaturesRange,
-    nRunsRange = nRunsRange,
-    naRateRange = naRateRange,
-    nReplicates = nReplicates,
-    type = "TMT",
-    folder = profilingTemp
-  )
+    replicateData(
+        nFeaturesRange = nFeaturesRange,
+        nRunsRange = nRunsRange,
+        naRateRange = naRateRange,
+        nReplicates = nReplicates,
+        type = "TMT",
+        folder = profilingTemp
+    )
 
-  ### label free DIA-NN ###
+    ### label free DIA-NN ###
 
-  ### plexed DIA-NN ###
+    ### plexed DIA-NN ###
 
-  #### Profiling ####
+    #### Profiling ####
 
-  if (dir.exists(outputFolder)) {
-    unlink(outputFolder, recursive = TRUE)
-  }
-  profilingWrapper(
-    dataFolder = profilingTemp,
-    outputFolder = outputFolder
-  )
+    if (dir.exists(outputFolder)) {
+        unlink(outputFolder, recursive = TRUE)
+    }
+    profilingWrapper(
+        dataFolder = profilingTemp,
+        outputFolder = outputFolder
+    )
 }
 
 #' Profile a Workflow Across Multiple Datasets
@@ -151,11 +151,12 @@ profilingWrapper <- function(dataFolder, outputFolder, ...) {
 #'          and aggregation steps. These steps are modular and allow the function to handle
 #'          various data processing tasks.
 #'
-profilingWorkflow <- function(quantPath,
-    designPath,
-    runCol,
-    dataDIA = NULL,
-    type) {
+profilingWorkflow <- function(
+        quantPath,
+        designPath,
+        runCol,
+        dataDIA = NULL,
+        type) {
     qfeatures <- stepDataImport(quantPath, designPath, runCol, dataDIA, type)
     assays <- 1:length(qfeatures)
 

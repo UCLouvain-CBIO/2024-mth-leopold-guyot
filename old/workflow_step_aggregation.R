@@ -15,10 +15,11 @@
 stepAggregate <- function(qfeatures, assays, type) {
     suppressMessages(
         switch(type,
-               "PSM" = .aggregatePSM(qfeatures, assays),
-               "peptide" = .aggregatePeptide(qfeatures, assays),
-               stop("Invalid aggregation type")
-    ))
+            "PSM" = .aggregatePSM(qfeatures, assays),
+            "peptide" = .aggregatePeptide(qfeatures, assays),
+            stop("Invalid aggregation type")
+        )
+    )
 }
 
 
@@ -38,13 +39,13 @@ stepAggregate <- function(qfeatures, assays, type) {
 #' @keywords internal
 .aggregatePSM <- function(qfeatures, assays) {
     aggregateFeaturesOverAssays(qfeatures,
-                                i = assays,
-                                fcol = "peptidesId",
-                                name = paste0(
-                                    "peptides_",
-                                    names(qfeatures[assays])
-                                ),
-                                fun = matrixStats::colMedians, na.rm = TRUE
+        i = assays,
+        fcol = "peptidesId",
+        name = paste0(
+            "peptides_",
+            names(qfeatures[assays])
+        ),
+        fun = matrixStats::colMedians, na.rm = TRUE
     )
 }
 

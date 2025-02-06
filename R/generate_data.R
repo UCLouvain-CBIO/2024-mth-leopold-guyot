@@ -31,8 +31,8 @@ generateTMTPSM <- function(base, nCell) {
         rownames(newAssay) <- newFeaturesNames
 
         noise <- pmin(matrix(rnorm(n = length(newAssay), mean = 0, sd = 5),
-                             nrow = nrow(newAssay),
-                             ncol = ncol(newAssay)
+            nrow = nrow(newAssay),
+            ncol = ncol(newAssay)
         ), 0)
         noisyNewAssay <- newAssay + noise
 
@@ -113,7 +113,7 @@ generateTMTProteins <- function(TMTPeptides) {
 # using scpdata::brunner2022()
 generateLFPSM <- function(base, nCell) {
     base <- base[, , -435]
-    return(NULL) #WIP
+    return(NULL) # WIP
 }
 
 # Generate QFeatures with 4 different variable:
@@ -124,11 +124,11 @@ generateLFPSM <- function(base, nCell) {
 #
 # Using a LF dataset as base (scpdata::brunner2022())
 generate4VarData <- function(base,
-                             nCell,
-                             nFeat,
-                             nAssay,
-                             nCol,
-                             seed = 123) {
+    nCell,
+    nFeat,
+    nAssay,
+    nCol,
+    seed = 123) {
     set.seed(seed)
     sampledAssays <- sample(length(base) - 1, nAssay, replace = TRUE)
 

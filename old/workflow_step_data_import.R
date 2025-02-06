@@ -22,13 +22,13 @@
 #' # Importing TMT data
 #' # qfeatures <- stepDataImport("quantData.csv", "designData.csv", "Run", type = "TMT")
 #'
-#'
 #' @export
-stepDataImport <- function(quantitativePath,
-    designPath,
-    runCol,
-    dataDIA = NULL,
-    type) {
+stepDataImport <- function(
+        quantitativePath,
+        designPath,
+        runCol,
+        dataDIA = NULL,
+        type) {
     quantitativeTable <- read.csv(quantitativePath)
     designTable <- read.csv(designPath)
     switch(type,

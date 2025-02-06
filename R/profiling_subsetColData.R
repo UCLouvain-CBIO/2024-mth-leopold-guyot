@@ -9,10 +9,10 @@ leduc <- scpdata::leduc2022_pSCoPE()
 PSM1000 <- generateTMTPSM(leduc, 1000)
 
 
-.fillEmptyExpsCopy <- function (exps, subr)
-{
-    if (!any(names(subr) %in% names(exps)))
+.fillEmptyExpsCopy <- function(exps, subr) {
+    if (!any(names(subr) %in% names(exps))) {
         stop("No matching experiment names in subset list", call. = FALSE)
+    }
     if (!all(names(exps) %in% names(subr))) {
         outnames <- setdiff(names(exps), names(subr))
         names(outnames) <- outnames
@@ -21,20 +21,20 @@ PSM1000 <- generateTMTPSM(leduc, 1000)
     subr[names(exps)]
 }
 
-.matchReorderSubCopy <- function(assayMap, identifiers)
-{
+.matchReorderSubCopy <- function(assayMap, identifiers) {
     positions <- unlist(lapply(identifiers, function(ident) {
         which(!is.na(match(assayMap[["primary"]], ident)))
     }))
     assayMap[positions, ]
 }
 
-subsetByColDataCopy <- function(x, y)
-{
+subsetByColDataCopy <- function(x, y) {
     coldata <- colData(x)
-    if (length(y) > nrow(coldata))
+    if (length(y) > nrow(coldata)) {
         stop("subscript vector 'j' in 'mae[i, j, k]' is out-of-bounds",
-             call. = FALSE)
+            call. = FALSE
+        )
+    }
     newcoldata <- coldata[y, , drop = FALSE]
     listMap <- mapToList(sampleMap(x), "assay")
     listMap <- lapply(listMap, function(elementMap, keepers) {
@@ -49,8 +49,10 @@ subsetByColDataCopy <- function(x, y)
         x[, j, drop = FALSE]
     }, x = experiments(x), j = columns)
     newSubset <- ExperimentList(newSubset)
-    BiocBaseUtils::setSlots(x, ExperimentList = newSubset, colData = newcoldata,
-                            sampleMap = newMap, check = FALSE)
+    BiocBaseUtils::setSlots(x,
+        ExperimentList = newSubset, colData = newcoldata,
+        sampleMap = newMap, check = FALSE
+    )
 }
 profvis::profvis(subsetByColDataCopy(PSM1000, PSM1000$filterBench > 1))
 
@@ -58,9 +60,11 @@ x <- PSM1000
 y <- PSM1000$filterBench > 1
 
 coldata <- colData(x)
-if (length(y) > nrow(coldata))
+if (length(y) > nrow(coldata)) {
     stop("subscript vector 'j' in 'mae[i, j, k]' is out-of-bounds",
-         call. = FALSE)
+        call. = FALSE
+    )
+}
 newcoldata <- coldata[y, , drop = FALSE]
 listMap <- mapToList(sampleMap(x), "assay")
 
@@ -79,7 +83,7 @@ profvis::profvis({
         which(!is.na(match(assayMap[["primary"]], ident)))
     }))
     assayMap[positions, ]
-    })
+})
 
 profvis::profvis({
     positions <- unlist(lapply(identifiers, function(ident) {
@@ -113,18 +117,21 @@ profvis::profvis({
 
 
 
-subsetByColDataCopy2 <- function(x, y)
-{
+subsetByColDataCopy2 <- function(x, y) {
     coldata <- colData(x)
-    if (length(y) > nrow(coldata))
+    if (length(y) > nrow(coldata)) {
         stop("subscript vector 'j' in 'mae[i, j, k]' is out-of-bounds",
-             call. = FALSE)
+            call. = FALSE
+        )
+    }
     newcoldata <- coldata[y, , drop = FALSE]
     listMap <- mapToList(sampleMap(x), "assay")
     assaysName <- names(listMap)
     listMap <- lapply(assaysName, function(assayName) {
-        .matchReorderSubCopy(listMap[[assayName]],
-                             rownames(newcoldata[newcoldata$Set == assayName,]))
+        .matchReorderSubCopy(
+            listMap[[assayName]],
+            rownames(newcoldata[newcoldata$Set == assayName, ])
+        )
     })
     names(listMap) <- assaysName
     newMap <- listToMap(listMap, fill = FALSE)
@@ -136,8 +143,10 @@ subsetByColDataCopy2 <- function(x, y)
         x[, j, drop = FALSE]
     }, x = experiments(x), j = columns)
     newSubset <- ExperimentList(newSubset)
-    BiocBaseUtils::setSlots(x, ExperimentList = newSubset, colData = newcoldata,
-                            sampleMap = newMap, check = FALSE)
+    BiocBaseUtils::setSlots(x,
+        ExperimentList = newSubset, colData = newcoldata,
+        sampleMap = newMap, check = FALSE
+    )
 }
 
 profvis::profvis(subsetByColDataCopy2(PSM1000, PSM1000$filterBench > 1))
@@ -145,15 +154,21 @@ profvis::profvis(subsetByColDataCopy2(PSM1000, PSM1000$filterBench > 1))
 
 subsetByColDataCopy3 <- function(x, y) {
     coldata <- colData(x)
-    if (length(y) > nrow(coldata))
+    if (length(y) > nrow(coldata)) {
         stop("subscript vector 'j' in 'mae[i, j, k]' is out-of-bounds",
-             call. = FALSE)
+            call. = FALSE
+        )
+    }
     newcoldata <- coldata[y, , drop = FALSE]
     listMap <- mapToList(sampleMap(x), "assay")
     listMap <- lapply(listMap, function(elementMap) {
-        .matchReorderSubCopy(elementMap,
-                             intersect(rownames(newcoldata),
-                                       elementMap$primary))
+        .matchReorderSubCopy(
+            elementMap,
+            intersect(
+                rownames(newcoldata),
+                elementMap$primary
+            )
+        )
     })
     newMap <- listToMap(listMap, fill = FALSE)
     columns <- lapply(listMap, function(mapChunk) {
@@ -164,14 +179,17 @@ subsetByColDataCopy3 <- function(x, y) {
         x[, j, drop = FALSE]
     }, x = experiments(x), j = columns)
     newSubset <- ExperimentList(newSubset)
-    BiocBaseUtils::setSlots(x, ExperimentList = newSubset, colData = newcoldata,
-                            sampleMap = newMap, check = FALSE)
+    BiocBaseUtils::setSlots(x,
+        ExperimentList = newSubset, colData = newcoldata,
+        sampleMap = newMap, check = FALSE
+    )
 }
 
 profvis::profvis(subsetByColDataCopy3(PSM1000, PSM1000$filterBench > 1))
 
 PSM4000 <- generateTMTPSM(leduc, 4000)
 microbenchmark(subsetByColDataCopy(PSM4000, PSM4000$filterBench > 1),
-               subsetByColDataCopy2(PSM4000, PSM4000$filterBench > 1),
-               subsetByColDataCopy3(PSM4000, PSM4000$filterBench > 1),
-               times = 3)
+    subsetByColDataCopy2(PSM4000, PSM4000$filterBench > 1),
+    subsetByColDataCopy3(PSM4000, PSM4000$filterBench > 1),
+    times = 3
+)

@@ -26,8 +26,10 @@ installScripts <- function(destinationFolder = getwd()) {
         message("Created directory: ", destinationFolder)
     }
 
-    scriptFiles <- list.files(scriptsDir, pattern = "\\.R$",
-                               full.names = TRUE)
+    scriptFiles <- list.files(scriptsDir,
+        pattern = "\\.R$",
+        full.names = TRUE
+    )
 
     if (length(scriptFiles) == 0) {
         stop("No R scripts found in the package scripts directory.")

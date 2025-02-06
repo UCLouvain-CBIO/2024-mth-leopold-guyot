@@ -26,12 +26,13 @@
 #' @import progress
 #'
 #' @export
-replicateData <- function(nFeaturesRange,
-    nRunsRange,
-    naRateRange,
-    nReplicates,
-    type,
-    folder) {
+replicateData <- function(
+        nFeaturesRange,
+        nRunsRange,
+        naRateRange,
+        nReplicates,
+        type,
+        folder) {
     if (!dir.exists(folder)) {
         dir.create(folder)
     }
@@ -97,14 +98,13 @@ replicateData <- function(nFeaturesRange,
 #' @return No return value. This function generates files and saves them to the specified folder.
 #'
 #' @keywords internal
-.createReplicate <- function(
-        nFeatures,
-        nRuns,
-        naRate,
-        nReplicate,
-        type,
-        folder,
-        generateFunction) {
+.createReplicate <- function(nFeatures,
+    nRuns,
+    naRate,
+    nReplicate,
+    type,
+    folder,
+    generateFunction) {
     # Define the subfolder name based on the current combination
     subfolder <- paste0(
         folder, "/",
