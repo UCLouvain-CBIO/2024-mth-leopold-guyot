@@ -28,8 +28,9 @@ helaBenchmark <- function(nreplicates,
 
     for (rep in 1:nreplicates){
         hela <- readRDS("dataOutput/hela/qfeatures_PSM.rds")
-        hela <- hela[, , 1:20]
-
+        print(hela)
+        hela <- hela[, , 1:50]
+        print(hela)
         write.table(
             data.frame(
                 rep = rep,
@@ -49,8 +50,8 @@ helaBenchmark <- function(nreplicates,
             hela <- filterFeat(hela),
             hela <- filterSamples(hela),
             hela <- zeroIsNA(hela, assaysNames),
+            hela <- aggregationToPep(hela, assaysNames),
             hela <- joining(hela, assaysNames),
-            hela <- aggregationToPep(hela),
             hela <- normalisation(hela)
             #hela <- aggregationToPro(hela)
         )
@@ -91,7 +92,6 @@ helaBenchmark <- function(nreplicates,
     sink()
 }
 
-
 filterFeat <- function(qfeatures){
     filterFeatures(qfeatures,
                    ~ Potential.contaminant != "+" &
@@ -104,16 +104,17 @@ filterSamples <- function(qfeatures) {
     subsetByColData(qfeatures, !grepl("2013_06_", qfeatures$runCol))
 }
 
+
+
+aggregationToPep <- function(qfeatures, assayName) {
+    aggregateFeaturesOverAssays(qfeatures, assayName,
+        fcol = "Modified.sequence", name = paste0(assayName, "_peptides"),
+        fun = colMedians)
+}
+
 joining <- function(qfeatures, assayName) {
-    joinAssays(qfeatures, assayName, name = "aggPSM")
+    joinAssays(qfeatures, paste0(assayName, "_peptides"), name = "peptides")
 }
-
-aggregationToPep <- function(qfeatures) {
-    aggregateFeatures(qfeatures, i = "aggPSM", fcol = "Modified.sequence",
-                      name = "peptides", fun = colMedians)
-}
-
-
 
 normalisation <- function(qfeatures) {
     QFeatures::normalize(qfeatures,
@@ -133,4 +134,4 @@ aggregationToPro <- function(qfeatures) {
 
 # MAIN
 
-helaBenchmark(2)
+helaBenchmark(3)
