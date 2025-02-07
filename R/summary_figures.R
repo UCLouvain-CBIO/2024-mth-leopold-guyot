@@ -122,10 +122,10 @@ plotRatio16000 <- benchmarkDF %>%
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
 step_order <- benchmarkDF %>%
-    filter(nCell == 1000) %>%  # Keep only 1000-cell rows for ordering
+    filter(nCell == 1000) %>%
     group_by(vignette_step) %>%
     summarise(meanTimePercentage1000 = mean(ratioTime) * 100) %>%
-    arrange(meanTimePercentage1000) %>%  # Order by mean time
+    arrange(desc(meanTimePercentage1000)) %>%  # Order by mean time
     pull(vignette_step)  # Extract ordered vignette_step values
 
 # Process the full dataset
@@ -133,16 +133,17 @@ plotRatioComplete <- benchmarkDF %>%
     group_by(vignette_step, nCell) %>%
     summarise(meanTimePercentage = mean(ratioTime) * 100) %>%
     ungroup() %>%
-    mutate(nCell = as.numeric(as.character(nCell))) %>%  # Convert nCell to numeric
+    mutate(nCell = as.numeric(as.character(nCell))) %>%
     mutate(nCell = factor(nCell, levels = sort(unique(nCell)))) %>%  # Order numerically
-    mutate(vignette_step = factor(vignette_step, levels = step_order)) %>%  # Order steps by 1000-cell mean time
+    mutate(vignette_step = factor(vignette_step, levels = step_order)) %>%
     ggplot(aes(x = vignette_step, y = meanTimePercentage, fill = nCell)) +
     geom_bar(position = "dodge", stat = "identity") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 plotRatioComplete
-plotTime / plotPeak /plotSize
-
+ggsave("Figs/vignetteBenchmark_ratioComplete.pdf", width = 10, height = 5)
+plotTime / plotPeak / plotSize
+ggsave("Figs/vignetteBenchmark_summary.pdf", width = 7, height = 7)
 
 ############ 4 var Benchmark ##############
 
@@ -189,7 +190,7 @@ create_plot <- function(df, x_var, color_var, fixed_filters) {
     ggplot(df_filtered, aes(x = .data[[x_var]], y = sizeTotal_MiB, color = factor(.data[[color_var]]))) +
         geom_point() +
         geom_line(alpha = 0.8) +
-        labs(color = color_var, x = x_var)
+        labs(color = color_var, x = x_var, y = "Total size (MiB)")
 }
 
 all_vars <- c("nCell", "nFeat", "nCol", "nAssay")
@@ -209,8 +210,40 @@ for (x_var in all_vars) {
         plots[[paste(x_var, color_var, sep = "_")]] <- create_plot(sizeTable, x_var, color_var, fixed_filters)
     }
 }
+theme_update(plot.title = element_text(hjust = 0.5))
+combined_plot <-
+    ((plots[["nCell_nFeat"]] + ggtitle("Size by nCell") + theme(axis.title.x=element_blank(),
+                                                             axis.text.x=element_blank(),
+                                                             axis.ticks.x=element_blank(),
+                                                             plot.title = element_text(size=22))) /
+         (plots[["nCell_nCol"]] + theme(axis.title.x=element_blank(),
+                                       axis.text.x=element_blank(),
+                                       axis.ticks.x=element_blank())) /
+         plots[["nCell_nAssay"]]) |
+    ((plots[["nFeat_nCol"]] + ggtitle("Size by nFeat") + theme(axis.title.x=element_blank(),
+                                                                axis.text.x=element_blank(),
+                                                                axis.ticks.x=element_blank(),
+                                                                plot.title = element_text(size=22))) /
+         (plots[["nFeat_nAssay"]] + theme(axis.title.x=element_blank(),
+                                         axis.text.x=element_blank(),
+                                         axis.ticks.x=element_blank())) /
+         plots[["nFeat_nCell"]]) |
+    ((plots[["nCol_nFeat"]] + ggtitle("Size by nCol") + theme(axis.title.x=element_blank(),
+                                                               axis.text.x=element_blank(),
+                                                               axis.ticks.x=element_blank(),
+                                                               plot.title = element_text(size=22))) /
+         (plots[["nCol_nAssay"]] + theme(axis.title.x=element_blank(),
+                                        axis.text.x=element_blank(),
+                                        axis.ticks.x=element_blank())) /
+         plots[["nCol_nCell"]]) |
+    ((plots[["nAssay_nCol"]] + ggtitle("Size by nAssay") + theme(axis.title.x=element_blank(),
+                                                                  axis.text.x=element_blank(),
+                                                                  axis.ticks.x=element_blank(),
+                                                                  plot.title = element_text(size=22))) /
+         (plots[["nAssay_nFeat"]] + theme(axis.title.x=element_blank(),
+                                         axis.text.x=element_blank(),
+                                         axis.ticks.x=element_blank())) /
+         plots[["nAssay_nCell"]])
 
-(plots[["nCell_nFeat"]] / plots[["nCell_nCol"]] / plots[["nCell_nAssay"]]) |
-(plots[["nFeat_nCol"]] / plots[["nFeat_nAssay"]] / plots[["nFeat_nCell"]]) |
-(plots[["nCol_nFeat"]] / plots[["nCol_nAssay"]] / plots[["nCol_nCell"]]) |
-(plots[["nAssay_nCol"]] / plots[["nAssay_nFeat"]] / plots[["nAssay_nCell"]])
+combined_plot
+ggsave("Figs/4var_global.pdf", width = 18, height = 10)
