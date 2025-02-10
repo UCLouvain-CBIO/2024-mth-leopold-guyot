@@ -28,9 +28,7 @@ helaBenchmark <- function(nreplicates,
 
     for (rep in 1:nreplicates){
         hela <- readRDS("dataOutput/hela/qfeatures_PSM.rds")
-        print(hela)
-        hela <- hela[, , 1:50]
-        print(hela)
+        cat("Starting replicate: ", rep)
         write.table(
             data.frame(
                 rep = rep,

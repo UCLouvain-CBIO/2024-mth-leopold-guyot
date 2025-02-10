@@ -4,7 +4,7 @@ library(QFeatures)
 px <- PXDataset("PXD042233")
 url <- pxurl(px)
 files <- grep("Orbitrap.*zip", pxfiles(px), value = TRUE)
-files <- files[1:1500]
+files <- files[1:500]
 
 sampleAnnot <- pxget(px, "Experimental-Design.sdrf.tsv")
 sampleAnnot <- DataFrame(read.delim(sampleAnnot))
@@ -25,6 +25,7 @@ for (zip in sucess$destfile) {
     file.remove(zip)
 }
 SEList <- lapply(list.files("data/hela/rawData"), function(dir) {
+    
     fullPath <- file.path("data/hela/rawData", dir, "evidence.txt")
     quantTable <- read.delim(fullPath)
     quantTable$PSMid <- paste0(dir, "_PSM", seq(nrow(quantTable)))
@@ -34,7 +35,7 @@ SEList <- lapply(list.files("data/hela/rawData"), function(dir) {
         quantCols = "Intensity",
         fnames = "PSMid"
     )
-    colnames(SE) <- baseName
+    colnames(SE) <- dir
     SE
 })
 
