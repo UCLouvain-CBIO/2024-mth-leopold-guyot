@@ -36,10 +36,14 @@ SEList <- lapply(list.files("data/hela/rawData"), function(dir) {
         fnames = "PSMid"
     )
     colnames(SE) <- dir
+    rowData(SE) <- rowData(SE)[, c("runCol", "PEP",
+                                   "Reverse", "Potential.contaminant",
+                                   "Modified.sequence",
+                                   "Leading.razor.protein")]
     SE
 })
 
 names(SEList) <- list.files("data/hela/rawData")
 qfeatures <- QFeatures(SEList, colData = sampleAnnot)
 
-saveRDS(qfeatures, file = "dataOutput/hela/qfeatures_PSM.rds")
+saveRDS(qfeatures, file = "dataOutput/hela/qfeatures_PSM_opti.rds")

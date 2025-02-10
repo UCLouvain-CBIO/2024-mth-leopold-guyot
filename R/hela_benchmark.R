@@ -5,7 +5,8 @@ library(benchmarkme)
 
 source(file.path("R", "utils.R"))
 helaBenchmark <- function(nreplicates,
-                               outputDir = "dataOutput/helaBenchmark") {
+                          qfeaturesPath,
+                          outputDir = "dataOutput/helaBenchmark") {
     if (file.exists(file.path(outputDir, "size_report.tsv"))) {
         unlink(file.path(outputDir, "size_report.tsv"))
         cat(file.path(outputDir, "size_report.tsv"), " has been deleted..\n")
@@ -27,7 +28,7 @@ helaBenchmark <- function(nreplicates,
                 row.names = FALSE)
 
     for (rep in 1:nreplicates){
-        hela <- readRDS("dataOutput/hela/qfeatures_PSM.rds")
+        hela <- readRDS(qfeaturesPath)
         cat("Starting replicate: ", rep)
         write.table(
             data.frame(
@@ -106,8 +107,8 @@ filterSamples <- function(qfeatures) {
 
 aggregationToPep <- function(qfeatures, assayName) {
     aggregateFeaturesOverAssays(qfeatures, assayName,
-        fcol = "Modified.sequence", name = paste0(assayName, "_peptides"),
-        fun = colMedians)
+                                fcol = "Modified.sequence", name = paste0(assayName, "_peptides"),
+                                fun = colMedians)
 }
 
 joining <- function(qfeatures, assayName) {
@@ -116,9 +117,9 @@ joining <- function(qfeatures, assayName) {
 
 normalisation <- function(qfeatures) {
     QFeatures::normalize(qfeatures,
-                            i = "peptides",
-                            method = "div.median",
-                            name = "peptides_norm"
+                         i = "peptides",
+                         method = "div.median",
+                         name = "peptides_norm"
     )
 }
 
@@ -132,4 +133,7 @@ aggregationToPro <- function(qfeatures) {
 
 # MAIN
 
-helaBenchmark(3)
+helaBenchmark(3, qfeaturesPath = "dataOutput/hela/qfeatures_PSM.rds",
+              outputDir = "dataOutput/helaBenchmark")
+helaBenchmark(3, qfeaturesPath = "dataOutput/hela/qfeatures_PSM_opti.rds",
+              outputDir = "dataOutput/helaBenchmark_opti")
