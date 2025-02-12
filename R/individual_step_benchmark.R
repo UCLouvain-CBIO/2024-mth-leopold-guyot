@@ -7,7 +7,7 @@ source(file.path("R", "utils.R"))
 
 # Variables
 destPath <- file.path("dataOutput", "individualStepsBenchmark")
-replicate <- 1
+replicate <- 3
 sizes <- c(500, 1000, 2000, 4000)
 
 benchmarkFilterFeatures <- function(qfeatures) {
