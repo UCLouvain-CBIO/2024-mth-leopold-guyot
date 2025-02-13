@@ -1,8 +1,8 @@
 "","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
 "1","assaysNames<-names(hela)",0,0,0
-"2","hela<-filterFeat(hela)",10.4899999999998,-1956.5,4422.2
-"3","hela<-filterSamples(hela)",161.349,-4.90000000000055,217.5
-"4","hela<-zeroIsNA(hela,assaysNames)",120.71,-5,348.6
-"5","hela<-aggregationToPep(hela,assaysNames)",3943.668,2234.8,3223.4
-"6","hela<-joining(hela,assaysNames)",332.9,633.2,4264.4
-"7","hela<-normalisation(hela)",9.79500000000007,424.400000000001,3862.2
+"2","hela<-filterFeat(hela)",10.6300000000001,-1956.5,4422.2
+"3","hela<-filterSamples(hela)",164.26,-4.90000000000055,217.5
+"4","hela<-zeroIsNA(hela,assaysNames)",121.678,-5,348.6
+"5","hela<-aggregationToPep(hela,assaysNames)",4042.578,2234.8,3176.4
+"6","hela<-joining(hela,assaysNames)",337.891,633.2,4264.4
+"7","hela<-normalisation(hela)",9.78999999999905,424.400000000001,3862.2

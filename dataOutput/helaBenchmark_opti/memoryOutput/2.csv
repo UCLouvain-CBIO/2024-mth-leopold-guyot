@@ -1,0 +1,8 @@
+"","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
+"1","assaysNames<-names(hela)",0,0,0
+"2","hela<-filterFeat(hela)",6.40299999999843,-542.2,1182.5
+"3","hela<-filterSamples(hela)",155.040000000001,-4.89999999999986,194.8
+"4","hela<-zeroIsNA(hela,assaysNames)",119.842999999997,-5,359.5
+"5","hela<-aggregationToPep(hela,assaysNames)",671.343000000001,1045.5,2210.4
+"6","hela<-joining(hela,assaysNames)",192.395,624.6,2454.4
+"7","hela<-normalisation(hela)",10.6380000000026,424.3,1829.8
