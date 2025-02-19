@@ -1,0 +1,279 @@
+---
+title: "analysis_profiling"
+output: html_document
+---
+```{r}
+library(profvis)
+```
+
+```{r}
+aggregateProf <- readRDS("dataOutput/profRes/aggregateProf.rds")
+joinProf <- readRDS("dataOutput/profRes/joinProf.rds")
+```
+
+```{r}
+aggregateProf
+```
+
+- Most of the execution time is taken by the invariant_cols2 calls. I expected that this function check for each column if it needs to be discarded (if no consensus between values of PSMs that come from the same peptide).
+
+```{r}
+joinProf
+```
+
+- Most of the execution time is taken by the reduce call, which is expected.
+
+
+## Code aggregate
+
+```{r}
+library(MsCoreUtils)
+library(QFeatures)
+.aggregateQFeatures <- function(object, fcol, fun, rowDataCols = NULL, ...) {
+    ## Copied from the PSMatch package, given that it is not available
+    ## on Bioconductor yet.
+    .makePeptideProteinVector <- function(m, collapse = ";") {
+        stopifnot(inherits(m, "Matrix"))
+        vec <- rep(NA_character_, nrow(m))
+        for (i in seq_len(nrow(m)))
+            vec[i] <- paste(names(which(m[i, ] != 0)), collapse = collapse)
+        names(vec) <- rownames(m)
+        vec
+    }
+    if (missing(fcol))
+        stop("'fcol' is required.")
+    m <- assay(object, 1)
+    if(is.null(rowDataCols)) rd <- rowData(object) else rd <- rowData(object)[, rowDataCols]
+    if (!fcol %in% names(rd))
+        stop("'fcol' not found in the assay's rowData.")
+    groupBy <- rd[[fcol]]
+
+    ## Store class of assay i in case it is not a SummarizedExperiment
+    ## so that the aggregated assay can be reverted to that class
+    .class <- class(object)
+
+    ## Message about NA values is quant/row data
+    has_na <- character()
+    if (anyNA(m))
+        has_na <- c(has_na, "quantitative")
+    if (anyNA(rd, recursive = TRUE))
+        has_na <- c(has_na, "row")
+    if (length(has_na)) {
+        msg <- paste(paste("Your", paste(has_na, collapse = " and "),
+                           " data contain missing values."),
+                     "Please read the relevant section(s) in the",
+                     "aggregateFeatures manual page regarding the",
+                     "effects of missing values on data aggregation.")
+        message(paste(strwrap(msg), collapse = "\n"))
+    }
+
+    if (is.vector(groupBy) & !is.list(groupBy)) { ## atomic vectors
+        aggregated_assay <- aggregate_by_vector(m, groupBy, fun, ...)
+        aggcount_assay <- aggregate_by_vector(m, groupBy, colCounts)
+        aggregated_rowdata <- QFeatures::reduceDataFrame(rd, rd[[fcol]],
+                                                         simplify = TRUE,
+                                                         drop = TRUE,
+                                                         count = TRUE)
+        assays <- SimpleList(assay = aggregated_assay, aggcounts = aggcount_assay)
+        rowdata <- aggregated_rowdata[rownames(aggregated_assay), , drop = FALSE]
+    } else if (is(groupBy, "Matrix")) {
+        aggregated_assay <- aggregate_by_matrix(m, groupBy, fun, ...)
+        ## Remove the adjacency matrix that should be dropped anyway
+        rd[[fcol]] <- NULL
+        ## Temp variable for unfolding and reducing - removed later
+        rd[["._vec_"]] <- .makePeptideProteinVector(groupBy)
+        rd <- unfoldDataFrame(rd, "._vec_")
+        aggregated_rowdata <- reduceDataFrame(rd, rd[["._vec_"]], drop = TRUE)
+        aggregated_rowdata[["._vec_"]] <- NULL
+        ## Count the number of peptides per protein
+        .n <- apply(groupBy != 0, 2, sum)
+        aggregated_rowdata[[".n"]] <- .n[rownames(aggregated_rowdata)]
+
+        assays <- SimpleList(assay = as.matrix(aggregated_assay)) ## to discuss
+        rowdata <- aggregated_rowdata[rownames(aggregated_assay), , drop = FALSE]
+    } else stop("'fcol' must refer to an atomic vector or a sparse matrix.")
+    se <- SummarizedExperiment(assays = assays,
+                               colData = colData(object),
+                               rowData = rowdata)
+
+    ## If the input objects weren't SummarizedExperiments, then try to
+    ## convert the merged assay into that class. If the conversion
+    ## fails, keep the SummarizedExperiment, otherwise use the
+    ## converted object (see issue #78).
+    if (.class != "SummarizedExperiment")
+        se <- tryCatch(as(se, .class),
+                       error = function(e) se)
+    return(se)
+}
+
+```
+
+```{r}
+aggregateFeatureCopy <- function(object, i, fcol, name = "newAssay",
+                   fun = MsCoreUtils::robustSummary, rowDataCols = NULL, ...) {
+              if (isEmpty(object))
+                  return(object)
+              ## Check arguments
+              if (any(present <- name %in% names(object)))
+                  stop("There's already one or more assays named: '",
+                       paste0(name[present], collapse = "', '"), "'.")
+              i <- QFeatures:::.normIndex(object, i)
+              if (length(i) != length(name)) stop("'i' and 'name' must have same length")
+              if (length(fcol) == 1) fcol <- rep(fcol, length(i))
+              if (length(i) != length(fcol)) stop("'i' and 'fcol' must have same length")
+              ## Aggregate each assay
+              for (j in seq_along(i)) {
+                  from <- i[[j]]
+                  to <- name[[j]]
+                  by <- fcol[[j]]
+                  ## Create the aggregated assay
+                  aggAssay <- .aggregateQFeatures(object[[from]],
+                                                  by, fun, rowDataCols, ...)
+                  ## Add the assay to the QFeatures object
+                  object <- addAssay(object, aggAssay, name = to)
+                  ## Link the input assay to the aggregated assay
+                  object <- addAssayLink(object, from = from,
+                                         to  = to, varFrom = by,
+                                         varTo = by)
+              }
+              object
+}
+
+
+
+```
+
+```{r}
+profvis(aggregateFeatureCopy(PSM1000, i = 1, fcol = "modseq"))
+
+
+```
+
+
+```{r}
+reduceDataFrame <- function(x, k, count = FALSE,
+                            simplify = TRUE, drop = FALSE) {
+    res <- split(x, k)
+    lens <- unname(lengths(res))
+    if (simplify | drop)
+        invars <- invariant_cols2(res)
+    res <- DataFrame(res)
+    if (simplify) {
+        ## replace invariant cols
+        for (i in invars)
+            res[[i]] <- unname(sapply(res[[i]], "[[", 1))
+    }
+    if (drop)
+        res <- res[, invars, drop = FALSE]
+    if (count)
+        res[[".n"]] <- lens
+    res
+}
+```
+
+```{r}
+se <- getWithColData(PSM1000, i = 1)
+rd <- rowData(se)
+m <- assay(se, 1)
+fcol <- "modseq"
+profvis({
+aggregated_rowdata <- reduceDataFrame(rd, rd[[fcol]],
+                                                         simplify = TRUE,
+                                                         drop = TRUE,
+                                                         count = TRUE)
+})
+```
+
+```{r}
+invariant_col2 <- function(x) all(lengths(lapply(x, unique)) == 1)
+
+invariant_cols2 <- function(x) {
+    res <- rep(NA, length(x[[1]]))
+    for (i in seq_along(res)) {
+        res[i] <- invariant_col2(x[, i])
+    }
+    which(res)
+}
+
+x <- split(rd, rd[[fcol]])
+lens <- unname(lengths(res))
+
+profvis(invariant_cols2(res))
+
+t <- res[, 1]
+profvis({
+    invariant_col2 <- function(x){
+        ap <- lapply(x, unique)
+        cd <- ap == 1
+        ll <- lengths(cd)
+        all(ll)
+        }
+
+    invariant_col2(t)
+    })
+```
+
+```{r}
+reduceDataFrame2 <- function(x, k, count = FALSE,
+                            simplify = TRUE, drop = FALSE) {
+    res <- base::split(x, k)
+    lens <- unname(lengths(res))
+    if (simplify | drop)
+        invars <- invariant_cols2(res)
+    res <- DataFrame(res)
+    if (simplify) {
+        ## replace invariant cols
+        for (i in invars)
+            res[[i]] <- unname(sapply(res[[i]], "[[", 1))
+    }
+    if (drop)
+        res <- res[, invars, drop = FALSE]
+    if (count)
+        res[[".n"]] <- lens
+    res
+}
+```
+
+```{r}
+rd
+rd[[fcol]]
+
+tapply(rd[, "Retention.time"], rd[[fcol]], FUN = function(x){length(unique(x))==1})
+
+df <- DataFrame(kept = rep(LETTERS[1:25], 100),
+                pep = rep(letters[1:25], 100),
+                discard = sample(2500, 2500))
+
+tapply(df, df[["pep"]], FUN = function(x){length(unique(x))==1}, simplify = F)
+
+test1 <- function(df, fcol) {
+    res <- rep(NA, ncol(df))
+    for (col in seq_along(res)) {
+        curr <- all(tapply(df[, col], df[[fcol]], FUN = function(x){length(unique(x))==1}, simplify = T))
+        res[col] <- curr
+    }
+    return(which(res))
+}
+
+test2 <- function(df, fcol) {
+    which(sapply(colnames(df), function(col) all(tapply(df[, col], df[[fcol]], function(x) length(unique(x)) == 1)), USE.NAMES = F))
+}
+
+
+bmark <- bench::mark(test1(rd, "modseq"),
+                     test2(rd, "modseq"),
+            {x <- split(rd, rd[[fcol]])
+            invariant_cols2(x)})
+
+bmark
+```
+
+Could we only test for cols that are still true ?
+=> For scp aggregateOverAssays => we can update a vector with the cols marked as TRUE
+And only test the others assays for these cols
+
+
+```{r}
+sessionInfo()
+```
+
