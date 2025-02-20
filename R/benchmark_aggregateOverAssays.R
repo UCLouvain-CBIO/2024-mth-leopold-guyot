@@ -137,6 +137,98 @@ aggregateFeaturesOverAssaysCopy <- function(object, i, fcol, name, fun, ...) {
         assayLinks = alnks)
 }
 
+
+aggregateFeaturesOverAssaysCopy2 <- function(object, i, fcol, name, fun, ...) {
+    if (length(i) != length(name)) stop("'i' and 'name' must have same length")
+    if (length(fcol) == 1) fcol <- rep(fcol, length(i))
+    if (length(i) != length(fcol)) stop("'i' and 'fcol' must have same length")
+    if (is.numeric(i)) i <- names(object)[i]
+
+    ## Compute the aggregated assays
+    el <- experiments(object)[i]
+    rowDataColsKept <- colnames(rowData(el[[1]]))
+    for (j in seq_along(el)) {
+        rowData(el[[j]]) <- rowData(el[[j]])[, rowDataColsKept]
+        suppressMessages(
+            curr <- QFeatures:::.aggregateQFeatures(el[[j]], fcol = fcol[j],
+                                            fun = fun, ...)
+        )
+        el[[j]] <- curr
+        rowDataColsKept <- intersect(rowDataColsKept, colnames(rowData(curr)))
+        ## Print progress
+        message("\rAggregated: ", j, "/", length(el), "\n")
+    }
+    names(el) <- name
+    ## Get the AssayLinks for the aggregated assays
+    alnks <- lapply(seq_along(i), function(j) {
+        hits <- QFeatures:::.get_Hits(rdFrom = rowData(object[[i[j]]]),
+                                      rdTo = rowData(el[[j]]),
+                                      varFrom = fcol[[j]],
+                                      varTo = fcol[[j]])
+        AssayLink(name = name[j], from = i[j], fcol = fcol[j], hits = hits)
+    })
+    ## Append the aggregated assays and AssayLinks to the previous assays
+    el <- c(object@ExperimentList, el)
+    alnks <- append(object@assayLinks, AssayLinks(alnks))
+    ## Update the sampleMapfrom the data
+    smap <- MultiAssayExperiment:::.sampleMapFromData(colData(object), el)
+    ## Create the new QFeatures object
+    new("QFeatures",
+        ExperimentList = el,
+        colData = colData(object),
+        sampleMap = smap,
+        metadata = metadata(object),
+        assayLinks = alnks)
+}
+
+
+aggregateFeaturesOverAssaysCopy3 <- function(object, i, fcol, name, fun, ...) {
+    if (length(i) != length(name)) stop("'i' and 'name' must have same length")
+    if (length(fcol) == 1) fcol <- rep(fcol, length(i))
+    if (length(i) != length(fcol)) stop("'i' and 'fcol' must have same length")
+    if (is.numeric(i)) i <- names(object)[i]
+
+    ## Compute the aggregated assays
+    el <- experiments(object)[i]
+    rowDataColsKept <- colnames(rowData(el[[1]]))
+    for (j in seq_along(el)) {
+        rowData(el[[j]]) <- rowData(el[[j]])[, rowDataColsKept]
+        suppressMessages(
+            curr <- QFeatures:::.aggregateQFeatures(el[[j]], fcol = fcol[j],
+                                                    fun = fun, ...)
+        )
+        el[[j]] <- curr
+        rowDataColsKept <- intersect(rowDataColsKept, colnames(rowData(curr)))
+        ## Print progress
+        message("\rAggregated: ", j, "/", length(el), "\n")
+    }
+    for (j in seq_along(el)) {
+        rowData(el[[j]]) <- rowData(el[[j]])[, rowDataColsKept]
+    }
+    names(el) <- name
+    ## Get the AssayLinks for the aggregated assays
+    alnks <- lapply(seq_along(i), function(j) {
+        hits <- QFeatures:::.get_Hits(rdFrom = rowData(object[[i[j]]]),
+                                      rdTo = rowData(el[[j]]),
+                                      varFrom = fcol[[j]],
+                                      varTo = fcol[[j]])
+        AssayLink(name = name[j], from = i[j], fcol = fcol[j], hits = hits)
+    })
+    ## Append the aggregated assays and AssayLinks to the previous assays
+    el <- c(object@ExperimentList, el)
+    alnks <- append(object@assayLinks, AssayLinks(alnks))
+    ## Update the sampleMapfrom the data
+    smap <- MultiAssayExperiment:::.sampleMapFromData(colData(object), el)
+    ## Create the new QFeatures object
+    new("QFeatures",
+        ExperimentList = el,
+        colData = colData(object),
+        sampleMap = smap,
+        metadata = metadata(object),
+        assayLinks = alnks)
+}
+
+
 leduc <- scpdata::leduc2022_pSCoPE()
 
 replicate <- 3
@@ -154,6 +246,16 @@ for (size in sizes) {
                                                 name = paste0("peptide_", seq_along(qfeat)),
                                                 fun = MsCoreUtils::robustSummary),
                     aggregateFeaturesOverAssaysCopy(qfeat,
+                                                    i = seq_along(qfeat),
+                                                    "modseq",
+                                                    name = paste0("peptide_", seq_along(qfeat)),
+                                                    fun = MsCoreUtils::robustSummary),
+                    aggregateFeaturesOverAssaysCopy2(qfeat,
+                                                    i = seq_along(qfeat),
+                                                    "modseq",
+                                                    name = paste0("peptide_", seq_along(qfeat)),
+                                                    fun = MsCoreUtils::robustSummary),
+                    aggregateFeaturesOverAssaysCopy3(qfeat,
                                                     i = seq_along(qfeat),
                                                     "modseq",
                                                     name = paste0("peptide_", seq_along(qfeat)),
