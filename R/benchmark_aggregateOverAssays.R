@@ -1,8 +1,8 @@
-library(profvis)
 library(QFeatures)
 library(scp)
 library(scpdata)
 library(MsCoreUtils)
+library(peakRAM)
 
 source("R/generate_data.R")
 
