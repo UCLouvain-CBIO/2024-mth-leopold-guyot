@@ -1,3 +1,5 @@
 "","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
-"1","aggregateFeaturesOverAssays(qfeat,i=seq_along(qfeat),""modseq"",name=paste0(""peptide_"",seq_along(qfeat)),fun=MsCoreUtils::robustSummary)",261.045,212.4,299.7
-"2","aggregateFeaturesOverAssaysCopy(qfeat,i=seq_along(qfeat),""modseq"",name=paste0(""peptide_"",seq_along(qfeat)),fun=MsCoreUtils::robustSummary)",114.545,199.1,271.1
+"1","aggregateFeaturesOverAssays(qfeat,i=seq_along(qfeat),""modseq"",name=paste0(""peptide_"",seq_along(qfeat)),fun=MsCoreUtils::robustSummary)",273.154,214.1,318
+"2","aggregateFeaturesOverAssaysCopy(qfeat,i=seq_along(qfeat),""modseq"",name=paste0(""peptide_"",seq_along(qfeat)),fun=MsCoreUtils::robustSummary)",107.445,187.5,290.6
+"3","aggregateFeaturesOverAssaysCopy2(qfeat,i=seq_along(qfeat),""modseq"",name=paste0(""peptide_"",seq_along(qfeat)),fun=MsCoreUtils::robustSummary)",106.498,187.5,273.9
+"4","aggregateFeaturesOverAssaysCopy3(qfeat,i=seq_along(qfeat),""modseq"",name=paste0(""peptide_"",seq_along(qfeat)),fun=MsCoreUtils::robustSummary)",109.4,185.5,269.1
