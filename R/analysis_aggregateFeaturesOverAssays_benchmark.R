@@ -1,4 +1,5 @@
 library(tidyverse)
+library(plotly)
 
 folder <- "dataOutput/aggregateBench"
 files <- list.files(folder, full.names = TRUE)
@@ -16,7 +17,7 @@ df <- map_df(files, function(file) {
         mutate(
             size = first_num,
             replicate = second_num,
-            new_version = str_detect(Function_Call, "Copy") # New column
+            Function_Call = str_extract(Function_Call, "^[^(]+")  # Extract part before '('
         )
 
     return(curr)
@@ -24,5 +25,5 @@ df <- map_df(files, function(file) {
 
 head(df)
 
-ggplot(data = df, aes(x = size, y = Elapsed_Time_sec, color = new_version))+
-    geom_point() +geom_smooth(method = "lm", size = 0.5)
+ggplotly(ggplot(data = df, aes(x = size, y = Elapsed_Time_sec, color = Function_Call))+
+    geom_point() +geom_smooth(method = "lm", size = 0.5))
