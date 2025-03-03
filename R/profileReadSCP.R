@@ -175,3 +175,34 @@ results <- microbenchmark::microbenchmark(readSCP(assayData = mqScpData,
                                                          colData = sampleAnnotation,
                                                          runCol = "Raw.file",
                                                          removeEmptyCols = TRUE))
+
+runs <- readRDS("dataOutput/runs.rds")
+sce <- readRDS("dataOutput/singleCell.rds")
+se <- readRDS("dataOutput/summarizedCell.rds")
+bigse <- c(se, se)
+bigse <- c(bigse, bigse)
+bigse <- c(bigse, bigse)
+bigse <- c(bigse, bigse)
+bigse <- c(bigse, bigse)
+bigse <- c(bigse, bigse)
+bigse <- c(bigse, bigse)
+
+bigsce <- as(bigse, "SingleCellExperiment")
+se <- as(sce, Class = "SummarizedExperiment")
+
+profvis::profvis(QFeatures:::.splitSE(sce, runs))
+profvis::profvis(QFeatures:::.splitSE(se, runs))
+
+res <- microbenchmark::microbenchmark(QFeatures:::.splitSE(sce, runs),
+                                      QFeatures:::.splitSE(se, runs))
+#### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+res <- microbenchmark::microbenchmark(rowData(sce),
+                                      rowData(sce, internal = TRUE),
+                                      mcols(sce),
+                                      rowData(se))
+x <- sce
+microbenchmark::microbenchmark(
+    elementMetadata(x),
+    mcols(rowRanges(x)))
+# profvis::profvis(rowData(bigsce))
+.splitSECopy(se, runs)

@@ -1,3 +1,5 @@
+library("SingleCellExperiment")
+
 .readSingleCellExperiment2 <- function(assayData,
                                        quantCols = NULL,
                                        fnames = NULL,
