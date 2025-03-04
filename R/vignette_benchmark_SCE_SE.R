@@ -30,7 +30,7 @@ leduc2022Benchmark <- function(nCellRange,
         row.names = FALSE
     )
 
-    base <- scpdata::leduc2022()
+    base <- scpdata::leduc2022_pSCoPE()
     for (rep in seq(nreplicates)) {
         for (nCell in nCellRange) {
             set.seed(123)
@@ -40,7 +40,7 @@ leduc2022Benchmark <- function(nCellRange,
                 " Cellules, replicate #",
                 rep
             ))
-            leduc <- leduc2022Generate(base, nCell)
+            leduc <- leduc2022Generate(base, nCell, SE)
             print(paste0(
                 "Starting benchmarking for ",
                 nCell,
@@ -49,7 +49,6 @@ leduc2022Benchmark <- function(nCellRange,
                 " SE = ",
                 SE
             ))
-            if (SE) leduc <- convertQFeatures(leduc)
             res <- peakRAM(
                 assaysNames <- names(leduc),
                 # Remove contaminant, noisy and low-confidence spectra
@@ -126,7 +125,7 @@ leduc2022Benchmark <- function(nCellRange,
 }
 
 
-leduc2022Generate <- function(base, nCell) {
+leduc2022Generate <- function(base, nCell, SE) {
     base <- base[, , -(135:138)]
     nRun <- nCell %/% 18
     nAssays <- length(base)
@@ -168,18 +167,27 @@ leduc2022Generate <- function(base, nCell) {
         rownames(newRowData) <- newFeaturesNames
 
         psmCounter <- psmCounter + nrow(newRowData)
-        noisy_se <- SingleCellExperiment(
-            assays = list(noisyNewAssay),
-            rowData = newRowData,
-            colData = newColData
-        )
+        if (SE) {
+            noisy_se <- SummarizedExperiment(
+                assays = list(noisyNewAssay),
+                rowData = newRowData,
+                colData = newColData
+            )
+        } else {
+            noisy_se <- SingleCellExperiment(
+                assays = list(noisyNewAssay),
+                rowData = newRowData,
+                colData = newColData
+            )
+        }
+
         new_qfeatures <- addAssay(new_qfeatures, noisy_se, name = paste0("run_", i))
     }
     return(new_qfeatures)
 }
 
 
-nCellRange <- c(1000, 2000, 4000)
+nCellRange <- c(500, 2000, 4000)
 
 nReplicates <- 3
 
