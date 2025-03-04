@@ -68,7 +68,7 @@ leduc2022Benchmark <- function(nCellRange,
                 # Join assays
                 leduc <- leducJoin(leduc, assaysNames),
                 # Filter single-cells based on median CV
-                leduc <- leducFilterCV(leduc, assaysNames),
+                #leduc <- leducFilterCV(leduc, assaysNames),
                 # Normalization peptides
                 leduc <- leducNormPep(leduc),
                 # Missing data filtering
@@ -187,7 +187,7 @@ leduc2022Generate <- function(base, nCell, SE) {
 }
 
 
-nCellRange <- c(500, 2000, 4000)
+nCellRange <- c(1000, 2000, 4000)
 
 nReplicates <- 3
 
