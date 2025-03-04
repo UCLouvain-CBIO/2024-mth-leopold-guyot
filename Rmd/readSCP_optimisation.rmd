@@ -1,0 +1,154 @@
+---
+title: "readSCP Optimisation"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load data and packages
+```{r}
+library(QFeatures)
+library(scp)
+library(microbenchmark)
+
+data("mqScpData")
+
+quantCols <- grep("Reporter.intensity.\\d", colnames(mqScpData),
+                   value = TRUE)
+
+data("sampleAnnotation")
+```
+
+# Current Implementation
+
+```{r, eval=FALSE}
+readSCP <- function(...) {
+    ans <- readQFeatures(...)
+    el <- ExperimentList(lapply(experiments(ans),
+                                as, "SingleCellExperiment"))
+    experiments(ans) <- el
+    ans
+}
+```
+
+```{r, message=FALSE}
+microbenchmark::microbenchmark(readSCP(assayData = mqScpData,
+                                       colData = sampleAnnotation,
+                                       runCol = "Raw.file",
+                                       removeEmptyCols = TRUE),
+                               readQFeatures(assayData = mqScpData,
+                                       colData = sampleAnnotation,
+                                       runCol = "Raw.file",
+                                       removeEmptyCols = TRUE),
+                               times = 5)
+```
+
+This implementation use readQFeatures to create a QFeatures object that contains
+SummarizedExperiment objects, then each SummarizedExperiment is converted into
+a SingleCellExperiment. This conversion takes time.
+
+A better approach could be to directly create the QFeatures object with
+SingleCellExperiment objects instead of SummarizedExperiment objects.
+
+To achieve that, we need to replace this line in the readSummarizedExperiment
+function from QFeatures:
+
+```{r, eval=FALSE}
+# old
+SummarizedExperiment(assay, rowData = fdata)
+
+#new
+SingleCellExperiment(assay, rowData = fdata)
+```
+
+```{r, message=FALSE}
+# load new readSCP implementation
+
+source(file = "R/readSCP2.R")
+
+microbenchmark::microbenchmark(readSCP(assayData = mqScpData,
+                                       colData = sampleAnnotation,
+                                       runCol = "Raw.file",
+                                       removeEmptyCols = TRUE),
+                               readSCP2(assayData = mqScpData,
+                                       colData = sampleAnnotation,
+                                       runCol = "Raw.file",
+                                       removeEmptyCols = TRUE),
+                               readQFeatures(assayData = mqScpData,
+                                       colData = sampleAnnotation,
+                                       runCol = "Raw.file",
+                                       removeEmptyCols = TRUE),
+                               times = 5)
+```
+
+We can see that this new implementation is worse than the current 
+implementation. But why?
+
+After multiple profiling of the readSCP2 code, and the different internal 
+functions. It appears that processing SingleCellExperiment objects takes way
+more time than processing SummarizedExperiment objects. To understand why,
+we explore the difference between a simple call to rowData on a sce and a se.
+
+```{r, message=FALSE}
+sce <- readRDS("dataOutput/singleCell.rds")
+se <- readRDS("dataOutput/summarizedCell.rds")
+
+res <- microbenchmark::microbenchmark(rowData(sce),
+                                      rowData(se),
+                                      times = 50)
+```
+
+We can see that using rowData on a sce takes way more time than on a se.
+To investigate why we first look at the source code.
+
+```{r}
+showMethods("rowData")
+
+getMethod("rowData", "SingleCellExperiment")
+
+getMethod("rowData", "SummarizedExperiment")
+```
+
+We can see that in both case, we call the SummarizedExperiment implementation
+(via callNextMethod for sce).
+This implementation use the mcols method:
+
+```{r}
+showMethods("mcols")
+
+getMethod("mcols", "RangedSummarizedExperiment")
+
+getMethod("mcols", "Vector")
+```
+Here we can see that a SummarizedExperiment will call the Vector implementation
+of the mcols method. While a SingleCellExperiment will call the 
+RangedSummarizedExperiment implementation of mcols. This is the case because 
+SingleCellExperiment directly inherit from RangedSummarizedExperiment. In fact,
+processing sce takes more time than se because it use RangedSummarizedExperiment
+methods that use `rowRanges()` which itself call updateObject which takes quite
+a lot of computation.
+```{r}
+microbenchmark(rowRanges(sce), times = 50)
+```
+With this benchmark we can see that the runtime of rowRanges corresponds to the
+difference between calling rowData on a SingleCellExperiment and on a
+SummarizedExperiment.
+
+
+# Conclusion
+
+SingleCellExperiment objects are less efficient than SummarizedExperiment
+objects because they inherit from RangedSummarizedExperiment which require
+more work for simple tasks (like getting slots'data like the rowData).
+
+The fonctionnalities of SingleCellExperiment are never used in a classical 
+workflow, therefore we recommand to use the base readQFeatures function to 
+generate the QFeatures object with SummarizedExperiment objects. And when a
+SingleCellExperiment object is needed, we can then convert the SummarizedExperiment
+object to a SingleCellExperiment object (for instance when using the scplainer
+pipeline).
+

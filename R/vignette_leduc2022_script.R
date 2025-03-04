@@ -52,7 +52,12 @@ leduc2022script <- function(leduc) {
 
     return(object.size(leduc))
 }
-
+convertQFeatures <- function(leduc) {
+    el <- ExperimentList(lapply(experiments(leduc),
+                                as, "SummarizedExperiment"))
+    experiments(leduc) <- el
+    return(leduc)
+}
 leducFilterFeatures <- function(leduc) {
     rowDataNames(leduc)
 

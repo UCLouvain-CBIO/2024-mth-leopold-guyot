@@ -199,10 +199,17 @@ res <- microbenchmark::microbenchmark(QFeatures:::.splitSE(sce, runs),
 res <- microbenchmark::microbenchmark(rowData(sce),
                                       rowData(sce, internal = TRUE),
                                       mcols(sce),
-                                      rowData(se))
+                                      rowData(se),
+                                      mcols(se))
 x <- sce
 microbenchmark::microbenchmark(
     elementMetadata(x),
     mcols(rowRanges(x)))
+
+microbenchmark::microbenchmark(
+    se@colData,
+    sce@colData,
+    colData(se),
+    colData(sce))
 # profvis::profvis(rowData(bigsce))
 .splitSECopy(se, runs)
