@@ -15,8 +15,9 @@ df_combined <- bind_rows(
 
 
 ggplot(df_combined, aes(x = state, y = sizeTotal, fill = type)) +
-    geom_bar(position = "dodge", stat = "identity")
-
+    geom_bar(position = "dodge", stat = "identity") +
+    ylab("Total Size (GB)")
+ggsave(filename = "Figs/HeLa_sizeTotal.png")
 df_long <- df_combined %>%
     pivot_longer(cols = starts_with("size"),
                  names_to = "SizeType",
@@ -61,22 +62,29 @@ df <- df %>%
     mutate(
         Elapsed_Time_sec = as.numeric(Elapsed_Time_sec),
         Total_RAM_Used_MiB = as.numeric(Total_RAM_Used_MiB),
-        Peak_RAM_Used_MiB = as.numeric(Peak_RAM_Used_MiB)
+        Peak_RAM_Used_MiB = as.numeric(Peak_RAM_Used_MiB),
+        Version = as.factor(Directory)
     )
+levels(df$Version) <- c("Optimized", "Vanilla")
 df %>%
-    group_by(Filename, Directory) %>%
+    group_by(Filename, Version) %>%
     summarise(totalTime = sum(Elapsed_Time_sec)) %>%
-    ggplot(aes(x = Directory, y = totalTime)) +
-        geom_boxplot()
-
+    ggplot(aes(x = Version, y = totalTime)) +
+        geom_boxplot() +
+        ylab("Total Time (s)")
+ggsave(filename = "Figs/HeLa_timeTotal.png")
 df %>%
     filter(Function_Call == "hela<-joining(hela,assaysNames)") %>%
-    group_by(Filename, Directory) %>%
-    ggplot(aes(x = Directory, y = Elapsed_Time_sec)) +
-    geom_boxplot()
+    group_by(Filename, Version) %>%
+    ggplot(aes(x = Version, y = Elapsed_Time_sec)) +
+    geom_boxplot() +
+    ylab("Joining Time (s)")
+ggsave(filename = "Figs/HeLa_timeJoin.png")
 
 df %>%
     filter(Function_Call == "hela<-aggregationToPep(hela,assaysNames)") %>%
-    group_by(Filename, Directory) %>%
-    ggplot(aes(x = Directory, y = Elapsed_Time_sec)) +
-    geom_boxplot()
+    group_by(Filename, Version) %>%
+    ggplot(aes(x = Version, y = Elapsed_Time_sec)) +
+    geom_boxplot() +
+    ylab("Aggregation Time (s)")
+ggsave(filename = "Figs/HeLa_timeAgg.png")

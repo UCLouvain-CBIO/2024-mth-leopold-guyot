@@ -142,8 +142,11 @@ plotRatioComplete <- benchmarkDF %>%
 
 plotRatioComplete
 ggsave("Figs/vignetteBenchmark_ratioComplete.pdf", width = 10, height = 5)
+ggsave("Figs/vignetteBenchmark_ratioComplete.png", width = 10, height = 5)
+
 plotTime / plotPeak / plotSize
 ggsave("Figs/vignetteBenchmark_summary.pdf", width = 7, height = 7)
+ggsave("Figs/vignetteBenchmark_summary.png", width = 7, height = 7)
 
 ############ 4 var Benchmark ##############
 
@@ -179,8 +182,10 @@ propTable <- sizeTable %>%
     pivot_longer(cols = 10:12, names_to = "component", values_to = "size")
 
 sizeWithProp <- ggplot(propTable, aes(fill = component, y = size, x = nCell)) +
-    geom_bar(position="stack", stat="identity")
-
+    geom_bar(position="stack", stat="identity") +
+    ylab("Total Size (MiB)") +
+    xlab("Number of Cells by Assay")
+ggsave(filename = "sizeByAssaySize.png")
 library(rlang)
 
 create_plot <- function(df, x_var, color_var, fixed_filters) {
@@ -247,3 +252,4 @@ combined_plot <-
 
 combined_plot
 ggsave("Figs/4var_global.pdf", width = 18, height = 10)
+ggsave("Figs/4var_global.png", width = 18, height = 10)

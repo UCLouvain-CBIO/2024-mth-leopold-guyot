@@ -23,7 +23,7 @@ results <- microbenchmark::microbenchmark(readSCP(assayData = mqScpData,
                                readQFeatures(assayData = mqScpData,
                                        colData = sampleAnnotation,
                                        runCol = "Raw.file",
-                                       removeEmptyCols = TRUE))
+                                       removeEmptyCols = TRUE), times = 10)
 profvis::profvis(readSCP(assayData = mqScpData,
                          colData = sampleAnnotation,
                          runCol = "Raw.file",
@@ -201,6 +201,8 @@ res <- microbenchmark::microbenchmark(rowData(sce),
                                       mcols(sce),
                                       rowData(se),
                                       mcols(se))
+res <- microbenchmark::microbenchmark(rowData(sce),
+                                      rowData(se))
 x <- sce
 microbenchmark::microbenchmark(
     elementMetadata(x),

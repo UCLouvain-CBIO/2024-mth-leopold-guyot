@@ -1,4 +1,5 @@
 library(tidyverse)
+library(patchwork)
 
 readData <- function(path) {
     inputDir <- path
@@ -52,9 +53,38 @@ SCE <- mutate(SCE, type = "sce")
 SE <- mutate(SE, type = "se")
 
 benchRes <- rbind(SCE, SE)
-
-benchRes %>%
+funcOrder <- benchRes %>%
     filter(nCell == 1000) %>%
+    group_by(Function_Call) %>%
+    summarize(median_time_sec = median(Elapsed_Time_sec)) %>%
+    arrange(desc(median_time_sec)) %>%
+    pull(Function_Call)
+
+time <- benchRes %>%
+    filter(nCell == 1000) %>%
+    mutate(Function_Call = factor(Function_Call, levels = funcOrder)) %>%
     ggplot(aes(x = Function_Call, y = Elapsed_Time_sec, colour = type)) +
     geom_boxplot() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+perct <- benchRes %>%
+    filter(nCell == 1000) %>%
+    mutate(Function_Call = factor(Function_Call, levels = funcOrder)) %>%
+    group_by(Function_Call, type) %>%
+    summarize(median_time_sec = median(Elapsed_Time_sec), .groups = "drop") %>%
+    pivot_wider(names_from = type, values_from = median_time_sec) %>%
+    mutate(percentage_diff = ((sce - se) / se) * 100) %>%
+    ggplot(aes(x = Function_Call, y = percentage_diff)) +
+    geom_col() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+    ylab("Increase in % when using sce")
+
+time <- time + theme(axis.title.x = element_blank(),
+                     axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank())
+combined_plot <- (time / perct) +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "right")
+ggsave("Figs/SCEvsSE_vignette.png", combined_plot,
+       height = 10,
+       width = 15)
