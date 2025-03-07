@@ -253,3 +253,107 @@ combined_plot <-
 combined_plot
 ggsave("Figs/4var_global.pdf", width = 18, height = 10)
 ggsave("Figs/4var_global.png", width = 18, height = 10)
+
+#### STEPS BENCHMARK
+
+inputDir <- "dataOutput/individualStepsBenchmark"
+files <- list.files(path = inputDir, full.names = TRUE)
+fileSizeReport <- "dataOutput/individualStepsBenchmark/qfeatures_size_report.tsv"
+stepResults <- files[!files == fileSizeReport]
+
+stepDataList <- lapply(stepResults, function(x) {
+    l <- as.list(read.csv(x)[1, 3:5])
+    l$name <- sub(".csv", "", basename(x))
+    l
+})
+
+sizeTable <- read.table(fileSizeReport, header = TRUE)
+
+peakRamTable <- do.call(rbind, lapply(stepDataList, as.data.frame))
+peakRamTable <- separate(peakRamTable, name, into = c("nCell", "step", "replicate"), sep = "_")
+
+nCell_order <- c("500", "1000", "2000", "4000")
+step_order <- c(
+    "benchmarkFilterFeatures",
+    "benchmarkFilterSamples",
+    "benchmarkZeroisNA",
+    "benchmarkAggPSM",
+    "benchmarkJoinPSM",
+    "benchmarkNormSampPep",
+    "benchmarkNormFeatPep",
+    "benchmarkLogPep",
+    "benchmarkAggPep",
+    "benchmarkImputePro"
+)
+
+timeMedian <- peakRamTable %>%
+    group_by(nCell, step) %>%
+    summarise(medianTimeElasped = median(Elapsed_Time_sec)) %>%
+    ungroup() %>%
+    mutate(
+        nCell = factor(nCell, levels = nCell_order),
+        step = factor(step, levels = rev(step_order))
+    )
+
+
+ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) +
+             geom_tile() +
+             scale_fill_gradient2(
+                 low = "white", high = "red",
+                 midpoint = median(peakRamTable$Elapsed_Time_sec, na.rm = TRUE),
+                 transform = "log2"
+             )
+ggsave("Figs/singleStepTime.png")
+convert_mib_to_gb <- function(mib) {
+    gb <- mib * 0.001024
+    return(gb)
+}
+peakRamMedian <- peakRamTable %>%
+    group_by(nCell, step) %>%
+    summarise(medianPeakRam = median(Peak_RAM_Used_MiB)) %>%
+    ungroup() %>%
+    mutate(
+        nCell = factor(nCell, levels = nCell_order),
+        step = factor(step, levels = rev(step_order))
+    )
+
+ggplot(peakRamMedian, aes(nCell, step, fill = medianPeakRam)) +
+             geom_tile() +
+             scale_fill_gradient2(
+                 low = "white", high = "red",
+                 midpoint = median(peakRamTable$Peak_RAM_Used_MiB, na.rm = TRUE),
+                 transform = "log2"
+             )
+ggsave("Figs/singleStepRam.png")
+convert_bytes_to_mib <- function(bytes) {
+    mib <- bytes / (2^20)
+    return(mib)
+}
+
+sizeComponentDiff <- sizeTable %>%
+    filter(nCell == 4000) %>%
+    group_by(step) %>%
+    summarise(
+        medianDiffAssay = convert_bytes_to_mib(median(sizeAssayAfter - sizeAssayBefore)),
+        medianDiffRowData = convert_bytes_to_mib(median(sizeRowDataAfter - sizeRowDataBefore)),
+        medianDiffColData = convert_bytes_to_mib(median(sizeColDataAfter - sizeColDataBefore))
+    ) %>%
+    ungroup() %>%
+    pivot_longer(
+        cols = c(medianDiffAssay, medianDiffRowData, medianDiffColData),
+        names_to = "component", values_to = "medianSizeMiB"
+    ) %>%
+    mutate(step = factor(step, levels = rev(step_order)))
+
+peakRamTableOrdered <- peakRamTable %>%
+    mutate(
+        step = factor(step, levels = rev(step_order)),
+        nCell = as.integer(nCell)
+    ) %>%
+    group_by(nCell, step) %>%
+    summarise("medianTimeSec" = median(Elapsed_Time_sec)) %>%
+    filter(step == "benchmarkFilterSamples")
+
+ggplotly(ggplot(peakRamTableOrdered, aes(x = nCell, y = medianTimeSec)) +
+             geom_line())
+ggsave("Figs/singleStepSample.png")
