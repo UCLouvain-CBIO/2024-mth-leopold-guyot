@@ -47,7 +47,7 @@ callr::r(
         git = git[["all"]],
         sizes = 500,
         rep = 3L,
-        outputDir = paste0("dataOutput/optimisationsBench/all/"),
+        outputDir = paste0("dataOutput/optimisationsBench/allSubset/"),
         subsetRowData = TRUE
     )
 )

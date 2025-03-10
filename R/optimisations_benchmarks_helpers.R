@@ -1,4 +1,5 @@
 source("R/vignette_leduc2022_script.R")
+library(peakRAM)
 
 leduc2022Benchmark <- function(nCellRange,
                                nreplicates,
@@ -39,9 +40,7 @@ leduc2022Benchmark <- function(nCellRange,
                 "Starting benchmarking for ",
                 nCell,
                 " Cellules, replicate #",
-                rep,
-                " SE = ",
-                SE
+                rep
             ))
             res <- peakRAM(
                 assaysNames <- names(leduc),
