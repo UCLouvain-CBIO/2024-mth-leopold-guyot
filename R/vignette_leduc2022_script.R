@@ -142,7 +142,7 @@ leducAggPSM <- function(leduc) {
     peptideAssays <- paste0("peptides_", names(leduc))
 
 
-    leduc <- aggregateFeaturesOverAssays(leduc,
+    leduc <- aggregateFeatures(leduc,
         i = names(leduc),
         fcol = "modseq",
         name = peptideAssays,
