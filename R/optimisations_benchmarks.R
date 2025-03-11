@@ -21,7 +21,7 @@ callr::r(
     func = leducBenchWrapper,
     args = list(
         git = git[["base"]],
-        sizes = 500,
+        sizes = 2000,
         rep = 1L,
         outputDir = paste0("dataOutput/optimisationsBench/subsetRowData"),
         subsetRowData = TRUE
@@ -34,7 +34,7 @@ for (verName in names(git)) {
         func = leducBenchWrapper,
         args = list(
             git = ver,
-            sizes = 500,
+            sizes = 2000,
             rep = 1L,
             outputDir = paste0("dataOutput/optimisationsBench/", verName)
         )
@@ -45,7 +45,7 @@ callr::r(
     func = leducBenchWrapper,
     args = list(
         git = git[["all"]],
-        sizes = 500,
+        sizes = 2000,
         rep = 1L,
         outputDir = paste0("dataOutput/optimisationsBench/allSubset"),
         subsetRowData = TRUE
