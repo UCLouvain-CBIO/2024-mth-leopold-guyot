@@ -161,7 +161,7 @@ leduc2022Generate <- function(base, nCell, subsetRowData = FALSE) {
 
         psmCounter <- psmCounter + nrow(newRowData)
 
-        if (subsetRowData) newRowData[, c("dart_PEP",
+        if (subsetRowData) newRowData <- newRowData[, c("dart_PEP",
                                           "PIF",
                                           "Proteins",
                                           "Leading.razor.protein",

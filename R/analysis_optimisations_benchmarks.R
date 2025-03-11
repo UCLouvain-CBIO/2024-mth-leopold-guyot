@@ -53,13 +53,15 @@ subset <- readData("dataOutput/optimisationsBench/subset") %>%
     mutate(optimisation = "subset")
 base <- readData("dataOutput/optimisationsBench/base") %>%
     mutate(optimisation = "base")
+allSubset <- readData("dataOutput/optimisationsBench/allSubset") %>%
+    mutate(optimisation = "allSubset")
 subsetRowData <- readData("dataOutput/optimisationsBench/subsetRowData") %>%
     mutate(optimisation = "subsetRowData")
-df <- rbind(base, agg, subset, subsetRowData, subsetRowData, all)
+df <- rbind(base, agg, subset, subsetRowData, allSubset, all)
 
 df %>%
-    mutate(optimisation = factor(optimisation, levels = c("base", "agg", "subset", "subsetRowData", "all"))) %>%
-    group_by(optimisation, replicate) %>%
+    mutate(optimisation = factor(optimisation, levels = c("base", "agg", "subset", "subsetRowData", "all", "allSubset"))) %>%
+    group_by(optimisation, replicate, Function_Call) %>%
     summarise(TotalTime = sum(Elapsed_Time_sec)) %>%
     ggplot(aes(x = optimisation, y = TotalTime, color = optimisation)) +
-        geom_boxplot()
+        geom_boxplot() + ylim(0,200) + facet_wrap(~Func)
