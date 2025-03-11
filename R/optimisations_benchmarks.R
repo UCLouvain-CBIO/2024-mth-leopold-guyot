@@ -1,9 +1,20 @@
-
-leducBenchWrapper <- function(git, sizes, replicate,
+source(file = "R/minimumWorkflow.R")
+leducBenchWrapper <- function(git, replicate,
                               outputDir, subsetRowData = FALSE) {
     remotes::install_github(git, force = TRUE)
-    source("R/optimisations_benchmarks_helpers.R")
-    leduc2022Benchmark(sizes, replicate, outputDir, subsetRowData)
+    library(MultiAssayExperiment)
+    library(QFeatures)
+    source(file = "R/minimumWorkflow.R")
+    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:3]
+    if (subsetRowData) rowData(leduc) <- rowData(leduc)[, c("dart_PEP",
+                                                        "PIF",
+                                                        "Proteins",
+                                                        "Leading.razor.protein",
+                                                        "dart_qval",
+                                                        "Potential.contaminant",
+                                                        "Reverse",
+                                                        "modseq")]
+    microbenchmark::microbenchmark(minimalWorkflow(leduc))
 }
 
 scpBase <- "UCLouvain-CBIO/scp@ed48ba714a4a354658c67345da1dcffd408cbe8a" # 1.15.2
@@ -16,12 +27,11 @@ git <- list("base" = c(MultiAssayExperimentBase, qfeaturesBase, scpBase),
          "subset" = c(MultiAssayExperimentSubset, qfeaturesBase, scpBase),
          "all" = c(MultiAssayExperimentSubset, qfeaturesAgg, scpBase)
          )
-
+cat("Starting subset config benchmark")
 callr::r(
     func = leducBenchWrapper,
     args = list(
         git = git[["base"]],
-        sizes = 2000,
         rep = 1L,
         outputDir = paste0("dataOutput/optimisationsBench/subsetRowData"),
         subsetRowData = TRUE
@@ -30,22 +40,22 @@ callr::r(
 
 for (verName in names(git)) {
     ver <- git[[verName]]
+    cat("Starting", verName, "config benchmark")
     callr::r(
         func = leducBenchWrapper,
         args = list(
             git = ver,
-            sizes = 2000,
             rep = 1L,
             outputDir = paste0("dataOutput/optimisationsBench/", verName)
         )
     )
 }
 
+cat("Starting allSubset config benchmark")
 callr::r(
     func = leducBenchWrapper,
     args = list(
         git = git[["all"]],
-        sizes = 2000,
         rep = 1L,
         outputDir = paste0("dataOutput/optimisationsBench/allSubset"),
         subsetRowData = TRUE

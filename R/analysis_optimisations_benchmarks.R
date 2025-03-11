@@ -61,7 +61,8 @@ df <- rbind(base, agg, subset, subsetRowData, allSubset, all)
 
 df %>%
     mutate(optimisation = factor(optimisation, levels = c("base", "agg", "subset", "subsetRowData", "all", "allSubset"))) %>%
-    group_by(optimisation, replicate, Function_Call) %>%
+    filter(Function_Call == "leduc<-leducAggPSM(leduc)") %>%
+    group_by(optimisation, replicate) %>%
     summarise(TotalTime = sum(Elapsed_Time_sec)) %>%
     ggplot(aes(x = optimisation, y = TotalTime, color = optimisation)) +
-        geom_boxplot() + ylim(0,200) + facet_wrap(~Func)
+        geom_boxplot()
