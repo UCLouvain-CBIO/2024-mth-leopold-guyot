@@ -1,8 +1,8 @@
 
 leducBenchWrapper <- function(git, sizes, replicate,
                               outputDir, subsetRowData = FALSE) {
-    source("R/optimisations_benchmarks_helpers.R")
     remotes::install_github(git, force = TRUE)
+    source("R/optimisations_benchmarks_helpers.R")
     leduc2022Benchmark(sizes, replicate, outputDir, subsetRowData)
 }
 
@@ -22,8 +22,8 @@ callr::r(
     args = list(
         git = git[["base"]],
         sizes = 500,
-        rep = 3L,
-        outputDir = paste0("dataOutput/optimisationsBench/subsetRowData/"),
+        rep = 1L,
+        outputDir = paste0("dataOutput/optimisationsBench/subsetRowData"),
         subsetRowData = TRUE
     )
 )
@@ -35,8 +35,8 @@ for (verName in names(git)) {
         args = list(
             git = ver,
             sizes = 500,
-            rep = 3L,
-            outputDir = paste0("dataOutput/optimisationsBench/", verName, "/")
+            rep = 1L,
+            outputDir = paste0("dataOutput/optimisationsBench/", verName)
         )
     )
 }
@@ -46,8 +46,8 @@ callr::r(
     args = list(
         git = git[["all"]],
         sizes = 500,
-        rep = 3L,
-        outputDir = paste0("dataOutput/optimisationsBench/allSubset/"),
+        rep = 1L,
+        outputDir = paste0("dataOutput/optimisationsBench/allSubset"),
         subsetRowData = TRUE
     )
 )
