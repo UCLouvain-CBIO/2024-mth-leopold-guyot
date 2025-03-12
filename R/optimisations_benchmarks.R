@@ -7,7 +7,9 @@ leducBenchWrapper <- function(git, replicate,
     library(microbenchmark)
     source(file = "R/minimumWorkflow.R")
     leduc <- scpdata::leduc2022_pSCoPE()[,, 1:50]
-    if (subsetRowData) rowData(leduc) <- rowData(leduc)[, c("dart_PEP",
+    if (subsetRowData) {
+        for (assay in seq_along(leduc)) {
+        rowData(leduc[[assay]]) <- rowData(leduc[[assay]])[, c("dart_PEP",
                                                         "PIF",
                                                         "Proteins",
                                                         "Leading.razor.protein",
@@ -15,6 +17,8 @@ leducBenchWrapper <- function(git, replicate,
                                                         "Potential.contaminant",
                                                         "Reverse",
                                                         "modseq")]
+        }
+    }
     write.csv(microbenchmark::microbenchmark(minimalWorkflow(leduc), times = replicate),
         file = paste0(outputDir, "/", "microbenchres.csv"))
 }
