@@ -4,8 +4,9 @@ leducBenchWrapper <- function(git, replicate,
     remotes::install_github(git, force = TRUE)
     library(MultiAssayExperiment)
     library(QFeatures)
+    library(microbenchmark)
     source(file = "R/minimumWorkflow.R")
-    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:3]
+    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:50]
     if (subsetRowData) rowData(leduc) <- rowData(leduc)[, c("dart_PEP",
                                                         "PIF",
                                                         "Proteins",
@@ -14,7 +15,8 @@ leducBenchWrapper <- function(git, replicate,
                                                         "Potential.contaminant",
                                                         "Reverse",
                                                         "modseq")]
-    microbenchmark::microbenchmark(minimalWorkflow(leduc))
+    write.csv(microbenchmark::microbenchmark(minimalWorkflow(leduc), times = replicate),
+        file = paste0(outputDir, "/", "microbenchres.csv"))
 }
 
 scpBase <- "UCLouvain-CBIO/scp@ed48ba714a4a354658c67345da1dcffd408cbe8a" # 1.15.2
