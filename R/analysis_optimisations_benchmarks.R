@@ -23,6 +23,7 @@ subsetRowData <- readData("dataOutput/optimisationsBench/subsetRowData") %>%
 df <- rbind(base, agg, subset, subsetRowData, allSubset, all)
 
 df %>%
-    mutate(optimisation = factor(optimisation, levels = c("base", "agg", "subset", "subsetRowData", "all", "allSubset"))) %>%
+    mutate(optimisation = factor(optimisation, levels = c("base", "agg", "subset", "subsetRowData", "all", "allSubset")),
+           time = time/10**8) %>%
     ggplot(aes(x = optimisation, y = time, color = optimisation)) +
-        geom_boxplot() + ylim(0, max(df$time))
+        geom_boxplot() + ylim(0, max(df$time/10**8))
