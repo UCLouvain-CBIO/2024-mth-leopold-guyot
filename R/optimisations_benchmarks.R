@@ -6,7 +6,7 @@ leducBenchWrapper <- function(git, replicate,
     library(QFeatures)
     library(microbenchmark)
     source(file = "R/minimumWorkflow.R")
-    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:50]
+    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:134]
     if (subsetRowData) {
         for (assay in seq_along(leduc)) {
         rowData(leduc[[assay]]) <- rowData(leduc[[assay]])[, c("dart_PEP",
@@ -33,12 +33,12 @@ git <- list("base" = c(MultiAssayExperimentBase, qfeaturesBase, scpBase),
          "subset" = c(MultiAssayExperimentSubset, qfeaturesBase, scpBase),
          "all" = c(MultiAssayExperimentSubset, qfeaturesAgg, scpBase)
          )
-cat("Starting subset config benchmark")
+cat("Starting subset config benchmark\n")
 callr::r(
     func = leducBenchWrapper,
     args = list(
         git = git[["base"]],
-        rep = 1L,
+        rep = 3L,
         outputDir = paste0("dataOutput/optimisationsBench/subsetRowData"),
         subsetRowData = TRUE
     )
@@ -46,23 +46,23 @@ callr::r(
 
 for (verName in names(git)) {
     ver <- git[[verName]]
-    cat("Starting", verName, "config benchmark")
+    cat("Starting", verName, "config benchmark\n")
     callr::r(
         func = leducBenchWrapper,
         args = list(
             git = ver,
-            rep = 1L,
+            rep = 3L,
             outputDir = paste0("dataOutput/optimisationsBench/", verName)
         )
     )
 }
 
-cat("Starting allSubset config benchmark")
+cat("Starting allSubset config benchmark\n")
 callr::r(
     func = leducBenchWrapper,
     args = list(
         git = git[["all"]],
-        rep = 1L,
+        rep = 3L,
         outputDir = paste0("dataOutput/optimisationsBench/allSubset"),
         subsetRowData = TRUE
     )
