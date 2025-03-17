@@ -1,6 +1,6 @@
 minimalWorkflow <- function(qfeatures) {
-    qfeatures <- filterRow(qfeatures)
-    qfeatures <- filterCol(qfeatures)
+    #qfeatures <- filterRow(qfeatures)
+    #qfeatures <- filterCol(qfeatures)
     qfeatures <- aggregatePSM(qfeatures)
 }
 

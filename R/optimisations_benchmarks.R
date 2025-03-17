@@ -6,7 +6,7 @@ leducBenchWrapper <- function(git, replicate,
     library(QFeatures)
     library(microbenchmark)
     source(file = "R/minimumWorkflow.R")
-    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:134]
+    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:130]
     if (subsetRowData) {
         for (assay in seq_along(leduc)) {
         rowData(leduc[[assay]]) <- rowData(leduc[[assay]])[, c("dart_PEP",
