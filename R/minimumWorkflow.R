@@ -1,6 +1,6 @@
 minimalWorkflow <- function(qfeatures) {
-    #qfeatures <- filterRow(qfeatures)
-    #qfeatures <- filterCol(qfeatures)
+    qfeatures <- filterRow(qfeatures)
+    qfeatures <- filterCol(qfeatures)
     qfeatures <- aggregatePSM(qfeatures)
 }
 
@@ -9,12 +9,12 @@ filterRow <- function(qfeatures) {
                        !grepl("CON", Proteins) &
                        Reverse != "+" &
                        !grepl("REV", Leading.razor.protein) &
-                       (is.na(PIF) | PIF > 0.6) &
-                       dart_qval < 0.01)
+                       (is.na(PIF) | PIF > 0.8) &
+                       dart_qval < 0.001)
 }
 
 filterCol <- function(qfeatures) {
-    subsetByColData(qfeatures, "SampleType" != "Unused")
+    qfeatures[, colData(qfeatures)$SampleType != "Unused", ]
 }
 
 aggregatePSM <- function(qfeatures) {
