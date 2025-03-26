@@ -8,7 +8,6 @@ sceBalanced <- readRDS("data/simulatedData/simulatedData_sampling_balanced_leduc
 
 sceRes <- scpModelWorkflow(sceBalanced, ~ Mock)
 
-
 daRes <- scpDifferentialAnalysis(
     sceRes,
     contrasts = list(c("Mock", "mock2", "mock1"))
@@ -64,8 +63,8 @@ aggregateColumns <- function(object, fcol, fun, ...) {
         aggregated_coldata <- QFeatures::reduceDataFrame(cd, cd[[fcol]],
                                                          simplify = TRUE,
                                                          drop = TRUE,
-                                                         count = TRUE)<
-            assays <- SimpleList(assay = aggregated_assay, aggcounts = aggcount_assay)
+                                                         count = TRUE)
+        assays <- SimpleList(assay = aggregated_assay, aggcounts = aggcount_assay)
         coldata <- aggregated_coldata[colnames(aggregated_assay), , drop = FALSE]
     } else if (is(groupBy, "Matrix")) {
         aggregated_assay <- aggregate_columns_by_matrix(m, groupBy, fun, ...)
@@ -142,6 +141,6 @@ aggregate_columns_by_matrix <- function (x, MAT, FUN, ...)
 }
 
 colData(sceBalanced)[["numMock"]] <- as.numeric(colData(sceBalanced)[["Mock"]])
-aggregateColumns(object = sceBalanced, fcol = "numMock", fun = MatrixGenerics::rowMeans)
-
+aggregatedData <- aggregateColumns(object = sceBalanced, fcol = "numMock", fun = MatrixGenerics::rowMeans, na.rm = TRUE)
+# aggregate by sampleType + batch ???
 assay(test)
