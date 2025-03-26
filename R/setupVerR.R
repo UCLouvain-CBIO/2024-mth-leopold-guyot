@@ -1,4 +1,5 @@
 library(VerR)
+library(dplyr)
 MultiAssayExperimentBase <- "waldronlab/MultiAssayExperiment@325c85ca26582027bcdd643df673a06ae649a36b"
 subsetByColDataOpti <- "waldronlab/MultiAssayExperiment@a293ab1fd1d5ac6671a4fb7a6cc91d14b21d0758"
 QFeaturesBase <- "rformassspectrometry/QFeatures@dc229a06c4feb7f61d1bc1ad7c9d626d58deb93a"
@@ -8,21 +9,21 @@ scpBase <- "UCLouvain-CBIO/scp@8818589510ffd69673b533f614fc3f3eb7f9598d"
 envCreate("subsetByColData",
           packages = c(subsetByColDataOpti,
                        QFeaturesBase,
-                       "bioc::scpdata", 
+                       "bioc::scpdata",
                        "peakRAM"))
 
 envCreate("base",
           packages = c(MultiAssayExperimentBase,
                        QFeaturesBase,
                        scpBase,
-                       "bioc::scpdata", 
+                       "bioc::scpdata",
                        "peakRAM"))
 
 envCreate("aggregation",
           packages = c(MultiAssayExperimentBase,
                        QFeaturesAgg,
                        scpBase,
-                       "bioc::scpdata", 
+                       "bioc::scpdata",
                        "peakRAM"))
 
 envCopyTo(file.path("R", "scriptVerR.R"),
@@ -31,13 +32,19 @@ envCopyTo(file.path("R", "scriptVerR.R"),
 
 envCopyTo(file.path("R", "minimumWorkflow.R"),
           targetPath = file.path("R", "minimumWorkflow.R"))
-
-write.csv(runInEnv({
+noSub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
     benchWrapper(replicate = 1, subsetRowData = FALSE)
-}), file = "dataOutput/optimisationsBench/noSubsetRowData.csv")
+})
+noSub <- bind_rows(noSub, .id = "version")
 
-write.csv(runInEnv({
+write.csv(noSub, file = "dataOutput/optimisationsBench/noSubsetRowData.csv")
+
+sub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
     benchWrapper(replicate = 1, subsetRowData = TRUE)
-}), file = "dataOutput/optimisationsBench/subsetRowData.csv")
+})
+
+sub <- bind_rows(sub, .id = "version")
+
+write.csv(sub, file = "dataOutput/optimisationsBench/subsetRowData.csv")
