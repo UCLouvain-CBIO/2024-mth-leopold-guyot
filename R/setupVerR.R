@@ -6,16 +6,16 @@ QFeaturesBase <- "rformassspectrometry/QFeatures@dc229a06c4feb7f61d1bc1ad7c9d626
 QFeaturesAgg <- "rformassspectrometry/QFeatures@9299c7bf86b9598a4db49e04f76e999cdfdd4952"
 scpBase <- "UCLouvain-CBIO/scp@8818589510ffd69673b533f614fc3f3eb7f9598d"
 
-envCreate("subsetByColData",
-          packages = c(subsetByColDataOpti,
-                       QFeaturesBase,
-                       "bioc::scpdata",
-                       "peakRAM"))
-
 envCreate("base",
           packages = c(MultiAssayExperimentBase,
                        QFeaturesBase,
                        scpBase,
+                       "bioc::scpdata",
+                       "peakRAM"))
+
+envCreate("subsetByColData",
+          packages = c(subsetByColDataOpti,
+                       QFeaturesBase,
                        "bioc::scpdata",
                        "peakRAM"))
 
@@ -26,9 +26,15 @@ envCreate("aggregation",
                        "bioc::scpdata",
                        "peakRAM"))
 
+envCreate("allOpti",
+          packages = c(subsetByColDataOpti,
+                       QFeaturesAgg,
+                       "bioc::scpdata",
+                       "peakRAM"))
+
 envCopyTo(file.path("R", "scriptVerR.R"),
           targetPath = file.path("R", "scriptVerR.R")
-          )
+)
 
 envCopyTo(file.path("R", "minimumWorkflow.R"),
           targetPath = file.path("R", "minimumWorkflow.R"))

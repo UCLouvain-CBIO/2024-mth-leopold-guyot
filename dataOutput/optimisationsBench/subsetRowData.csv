@@ -1,4 +1,13 @@
-"","aggregation.Function_Call","aggregation.Elapsed_Time_sec","aggregation.Total_RAM_Used_MiB","aggregation.Peak_RAM_Used_MiB","base.Function_Call","base.Elapsed_Time_sec","base.Total_RAM_Used_MiB","base.Peak_RAM_Used_MiB","subsetByColData.Function_Call","subsetByColData.Elapsed_Time_sec","subsetByColData.Total_RAM_Used_MiB","subsetByColData.Peak_RAM_Used_MiB"
-"1","leduc<-filterRow(leduc)",5.75199999999998,-84,129.4,"leduc<-filterRow(leduc)",5.56200000000001,-84,129.4,"leduc<-filterRow(leduc)",5.77499999999998,-84,128.2
-"2","leduc<-filterCol(leduc)",135.746,-6.30000000000001,73,"leduc<-filterCol(leduc)",131.612,-6.30000000000001,73,"leduc<-filterCol(leduc)",4.32999999999998,-6.40000000000003,75.3
-"3","aggregatePSM(leduc)",495.938,148.9,238.6,"aggregatePSM(leduc)",151.994,150.5,198,"aggregatePSM(leduc)",156.829,150.6,203.4
+"","version","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
+"1","aggregation","leduc<-filterRow(leduc)",6.79900000000001,-84,129.4
+"2","aggregation","leduc<-filterCol(leduc)",163.063,-6.30000000000001,73
+"3","aggregation","aggregatePSM(leduc)",631.811,148.9,238.6
+"4","allOpti","leduc<-filterRow(leduc)",6.65200000000002,-84,128.9
+"5","allOpti","leduc<-filterCol(leduc)",5.256,-6.39999999999998,74.7
+"6","allOpti","aggregatePSM(leduc)",605.057,148.9,251.9
+"7","base","leduc<-filterRow(leduc)",6.75799999999998,-84,129.4
+"8","base","leduc<-filterCol(leduc)",167.462,-6.30000000000001,73
+"9","base","aggregatePSM(leduc)",195.119,150.5,198
+"10","subsetByColData","leduc<-filterRow(leduc)",7.04500000000002,-84,128.2
+"11","subsetByColData","leduc<-filterCol(leduc)",5.17600000000002,-6.40000000000003,75.3
+"12","subsetByColData","aggregatePSM(leduc)",192.188,150.6,204.8
