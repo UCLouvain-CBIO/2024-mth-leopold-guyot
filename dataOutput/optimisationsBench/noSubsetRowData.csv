@@ -1,0 +1,4 @@
+"","aggregation.Function_Call","aggregation.Elapsed_Time_sec","aggregation.Total_RAM_Used_MiB","aggregation.Peak_RAM_Used_MiB","base.Function_Call","base.Elapsed_Time_sec","base.Total_RAM_Used_MiB","base.Peak_RAM_Used_MiB","subsetByColData.Function_Call","subsetByColData.Elapsed_Time_sec","subsetByColData.Total_RAM_Used_MiB","subsetByColData.Peak_RAM_Used_MiB"
+"1","leduc<-filterRow(leduc)",6.332,-352.7,447.5,"leduc<-filterRow(leduc)",6.61,-352.8,447.3,"leduc<-filterRow(leduc)",6.165,-352.8,446.6
+"2","leduc<-filterCol(leduc)",136.16,-6.39999999999998,72.6,"leduc<-filterCol(leduc)",137.885,-6.30000000000007,72.8,"leduc<-filterCol(leduc)",4.28099999999999,-6.40000000000009,74.9
+"3","aggregatePSM(leduc)",577.709,224.9,318.1,"aggregatePSM(leduc)",456.283,356.3,419.8,"aggregatePSM(leduc)",438.809,356.4,427.2

@@ -8,22 +8,29 @@ scpBase <- "UCLouvain-CBIO/scp@8818589510ffd69673b533f614fc3f3eb7f9598d"
 envCreate("subsetByColData",
           packages = c(subsetByColDataOpti,
                        QFeaturesBase,
-                       scpBase))
+                       "bioc::scpdata", 
+                       "peakRAM"))
 
 envCreate("base",
           packages = c(MultiAssayExperimentBase,
                        QFeaturesBase,
-                       scpBase))
+                       scpBase,
+                       "bioc::scpdata", 
+                       "peakRAM"))
 
 envCreate("aggregation",
           packages = c(MultiAssayExperimentBase,
                        QFeaturesAgg,
-                       scpBase))
+                       scpBase,
+                       "bioc::scpdata", 
+                       "peakRAM"))
 
 envCopyTo(file.path("R", "scriptVerR.R"),
-          targetPath = "R")
+          targetPath = file.path("R", "scriptVerR.R")
+          )
+
 envCopyTo(file.path("R", "minimumWorkflow.R"),
-          targetPath = "R")
+          targetPath = file.path("R", "minimumWorkflow.R"))
 
 write.csv(runInEnv({
     source(file.path("R", "scriptVerR.R"))
