@@ -18,8 +18,8 @@ benchWrapper <- function(replicate, subsetRowData = FALSE) {
                                                                    "modseq")]
         }
     }
-    peakRAM::peakRAM(leduc <- filterRow(leduc),
-                     leduc <- filterCol(leduc),
+    peakRAM::peakRAM(#leduc <- filterRow(leduc),
+                     #leduc <- filterCol(leduc),
                      aggregatePSM(leduc)
                      )
 }

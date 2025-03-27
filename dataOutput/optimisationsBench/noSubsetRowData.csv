@@ -1,13 +1,5 @@
 "","version","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
-"1","aggregation","leduc<-filterRow(leduc)",8.11,-352.8,447.3
-"2","aggregation","leduc<-filterCol(leduc)",162.741,-6.30000000000007,72.8
-"3","aggregation","aggregatePSM(leduc)",716.496,224.9,317.6
-"4","allOpti","leduc<-filterRow(leduc)",7.473,-352.8,446.2
-"5","allOpti","leduc<-filterCol(leduc)",5.092,-6.39999999999998,74.3
-"6","allOpti","aggregatePSM(leduc)",706.296,224.9,305.8
-"7","base","leduc<-filterRow(leduc)",7.53699999999999,-352.8,447.3
-"8","base","leduc<-filterCol(leduc)",162.315,-6.30000000000007,72.8
-"9","base","aggregatePSM(leduc)",561.211,356.3,419.8
-"10","subsetByColData","leduc<-filterRow(leduc)",7.553,-352.8,446.6
-"11","subsetByColData","leduc<-filterCol(leduc)",5.55500000000001,-6.40000000000009,74.8
-"12","subsetByColData","aggregatePSM(leduc)",561.917,356.4,427.3
+"1","aggregation","aggregatePSM(leduc)",851.608,428.8,574.9
+"2","allOpti","aggregatePSM(leduc)",825.097,428.8,575.8
+"3","base","aggregatePSM(leduc)",789.991,491.1,595.4
+"4","subsetByColData","aggregatePSM(leduc)",792.199,491,588.4
