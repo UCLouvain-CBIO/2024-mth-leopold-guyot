@@ -16,6 +16,7 @@ envCreate("base",
 envCreate("subsetByColData",
           packages = c(subsetByColDataOpti,
                        QFeaturesBase,
+                       scpBase,
                        "bioc::scpdata",
                        "peakRAM"))
 
@@ -29,6 +30,7 @@ envCreate("aggregation",
 envCreate("allOpti",
           packages = c(subsetByColDataOpti,
                        QFeaturesAgg,
+                       scpBase,
                        "bioc::scpdata",
                        "peakRAM"))
 

@@ -2,6 +2,7 @@ source(file.path("R", "minimumWorkflow.R"))
 library(MultiAssayExperiment)
 library(QFeatures)
 library(peakRAM)
+library(scp)
 library(scpdata)
 
 benchWrapper <- function(replicate, subsetRowData = FALSE) {
@@ -20,6 +21,7 @@ benchWrapper <- function(replicate, subsetRowData = FALSE) {
     }
     peakRAM::peakRAM(#leduc <- filterRow(leduc),
                      #leduc <- filterCol(leduc),
-                     aggregatePSM(leduc)
+                     aggregatePSM(leduc),
+                     aggregatePSMscp(leduc)
                      )
 }

@@ -28,3 +28,15 @@ aggregatePSM <- function(qfeatures) {
                                fun = colMeans
     )
 }
+
+aggregatePSMscp <- function(qfeatures) {
+    peptideAssays <- paste0("peptides_", names(qfeatures))
+
+
+    aggregateFeaturesOverAssays(qfeatures,
+                               i = names(qfeatures),
+                               fcol = "modseq",
+                               name = peptideAssays,
+                               fun = colMeans
+    )
+}

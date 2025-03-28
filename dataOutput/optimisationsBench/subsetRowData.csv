@@ -1,5 +1,9 @@
 "","version","Function_Call","Elapsed_Time_sec","Total_RAM_Used_MiB","Peak_RAM_Used_MiB"
-"1","aggregation","aggregatePSM(leduc)",673.837,291.8,437.9
-"2","allOpti","aggregatePSM(leduc)",660.811,291.8,439
-"3","base","aggregatePSM(leduc)",234.137,291.8,356.1
-"4","subsetByColData","aggregatePSM(leduc)",223.672,291.7,364.6
+"1","aggregation","aggregatePSM(leduc)",525.31,291.8,472.9
+"2","aggregation","aggregatePSMscp(leduc)",70.384,291.5,416.8
+"3","allOpti","aggregatePSM(leduc)",540.15,291.8,473
+"4","allOpti","aggregatePSMscp(leduc)",73.08,291.5,416.8
+"5","base","aggregatePSM(leduc)",180.425,291.8,361.6
+"6","base","aggregatePSMscp(leduc)",70.087,291.5,433.4
+"7","subsetByColData","aggregatePSM(leduc)",183.383,291.8,361.6
+"8","subsetByColData","aggregatePSMscp(leduc)",72.021,291.5,435.5
