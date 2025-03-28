@@ -6,7 +6,7 @@ library(scp)
 library(scpdata)
 
 benchWrapper <- function(replicate, subsetRowData = FALSE) {
-    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:125]
+    leduc <- scpdata::leduc2022_pSCoPE()[,, 1:30]
     if (subsetRowData) {
         for (assay in seq_along(leduc)) {
             rowData(leduc[[assay]]) <- rowData(leduc[[assay]])[, c("dart_PEP",
@@ -19,9 +19,11 @@ benchWrapper <- function(replicate, subsetRowData = FALSE) {
                                                                    "modseq")]
         }
     }
-    peakRAM::peakRAM(#leduc <- filterRow(leduc),
-                     #leduc <- filterCol(leduc),
-                     aggregatePSM(leduc),
-                     aggregatePSMscp(leduc)
-                     )
+    results <- do.call(rbind, lapply(1:replicate, function(i) {
+        res <- peakRAM(aggregatePSM(leduc))
+        res$replicate <- i
+        return(res)
+    }))
+
+    return(results)
 }
