@@ -21,12 +21,12 @@ aggregatePSM <- function(qfeatures) {
     peptideAssays <- paste0("peptides_", names(qfeatures))
 
 
-    aggregateFeatures(qfeatures,
+    suppressMessages(aggregateFeatures(qfeatures,
                                i = names(qfeatures),
                                fcol = "modseq",
                                name = peptideAssays,
                                fun = colMeans
-    )
+    ))
 }
 
 aggregatePSMscp <- function(qfeatures) {
