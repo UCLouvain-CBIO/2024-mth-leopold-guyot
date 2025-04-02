@@ -13,12 +13,12 @@ envCreate("base",
                        "bioc::scpdata",
                        "peakRAM"))
 
-envCreate("subsetByColData",
-          packages = c(subsetByColDataOpti,
-                       QFeaturesBase,
-                       scpBase,
-                       "bioc::scpdata",
-                       "peakRAM"))
+# envCreate("subsetByColData",
+#           packages = c(subsetByColDataOpti,
+#                        QFeaturesBase,
+#                        scpBase,
+#                        "bioc::scpdata",
+#                        "peakRAM"))
 
 envCreate("aggregation",
           packages = c(MultiAssayExperimentBase,
@@ -27,12 +27,12 @@ envCreate("aggregation",
                        "bioc::scpdata",
                        "peakRAM"))
 
-envCreate("allOpti",
-          packages = c(subsetByColDataOpti,
-                       QFeaturesAgg,
-                       scpBase,
-                       "bioc::scpdata",
-                       "peakRAM"))
+# envCreate("allOpti",
+#           packages = c(subsetByColDataOpti,
+#                        QFeaturesAgg,
+#                        scpBase,
+#                        "bioc::scpdata",
+#                        "peakRAM"))
 
 envCopyTo(file.path("R", "scriptVerR.R"),
           targetPath = file.path("R", "scriptVerR.R")
