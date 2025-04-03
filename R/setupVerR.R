@@ -6,6 +6,7 @@ QFeaturesBase <- "rformassspectrometry/QFeatures@dc229a06c4feb7f61d1bc1ad7c9d626
 QFeaturesAgg <- "rformassspectrometry/QFeatures@9299c7bf86b9598a4db49e04f76e999cdfdd4952"
 QFeaturesAgg2 <- "leopoldguyot/QFeatures@d7496b4f6a3e8aba2be4cf63fd8856b74eec3e41"
 scpBase <- "UCLouvain-CBIO/scp@8818589510ffd69673b533f614fc3f3eb7f9598d"
+scpOpti <- "leopoldguyot/scp@68de84b559f1e92b31d1190c1add678914012e87"
 
 envCreate("base",
           packages = c(MultiAssayExperimentBase,
@@ -35,6 +36,13 @@ envCreate("aggregation2",
                        "bioc::scpdata",
                        "peakRAM"))
 
+envCreate("scpOpti",
+          packages = c(MultiAssayExperimentBase,
+                       QFeaturesBase,
+                       scpOpti,
+                       "bioc::scpdata",
+                       "peakRAM"))
+
 # envCreate("allOpti",
 #           packages = c(subsetByColDataOpti,
 #                        QFeaturesAgg,
@@ -50,7 +58,7 @@ envCopyTo(file.path("R", "minimumWorkflow.R"),
           targetPath = file.path("R", "minimumWorkflow.R"))
 noSub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 3, subsetRowData = FALSE)
+    benchWrapper(replicate = 1, subsetRowData = FALSE)
 })
 noSub <- bind_rows(noSub, .id = "version")
 
@@ -58,7 +66,7 @@ write.csv(noSub, file = "dataOutput/optimisationsBench/noSubsetRowData.csv")
 
 sub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 3, subsetRowData = TRUE)
+    benchWrapper(replicate = 1, subsetRowData = TRUE)
 })
 
 sub <- bind_rows(sub, .id = "version")
