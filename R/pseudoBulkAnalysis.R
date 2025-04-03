@@ -62,3 +62,7 @@ resAggNames <- daAggRes$feature
 listUpSet <- list("model" = resNames,"aggModel" = resAggNames, "real" = trueNames)
 upset(fromList(listUpSet), order.by = "freq")
 saveRDS(listUpSet, "dataOutput/pseudoBulk/listUpSet.rds")
+
+listUpSet <- readRDS("dataOutput/pseudoBulk/listUpSet.rds")
+
+upset(UpSetR::fromList(listUpSet))
