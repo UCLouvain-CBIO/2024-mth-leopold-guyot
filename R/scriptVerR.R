@@ -5,7 +5,7 @@ library(peakRAM)
 library(scp)
 library(scpdata)
 
-benchWrapper <- function(replicate, subset_sizes = c(10, 30, 60, 120), subsetRowData = FALSE) {
+benchWrapper <- function(replicate, subset_sizes = c(10, 30, 60), subsetRowData = FALSE) {
     results_list <- list()
 
     for (size in subset_sizes) {
