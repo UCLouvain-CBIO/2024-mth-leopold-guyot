@@ -56,8 +56,8 @@ envCopyTo(file.path("R", "scriptVerR.R"),
           targetPath = file.path("R", "scriptVerR.R")
 )
 
-# envCopyTo(file.path("R", "minimumWorkflow.R"),
-#           targetPath = file.path("R", "minimumWorkflow.R"))
+envCopyTo(file.path("R", "minimumWorkflow.R"),
+           targetPath = file.path("R", "minimumWorkflow.R"))
 # noSub <- runInEnv({
 #     source(file.path("R", "scriptVerR.R"))
 #     benchWrapper(replicate = 1, subsetRowData = FALSE)
