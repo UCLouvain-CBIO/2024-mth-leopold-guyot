@@ -8,12 +8,12 @@ QFeaturesAgg2 <- "leopoldguyot/QFeatures@d7496b4f6a3e8aba2be4cf63fd8856b74eec3e4
 scpBase <- "UCLouvain-CBIO/scp@8818589510ffd69673b533f614fc3f3eb7f9598d"
 scpOpti <- "leopoldguyot/scp@68de84b559f1e92b31d1190c1add678914012e87"
 
-envCreate("base",
-          packages = c(MultiAssayExperimentBase,
-                       QFeaturesBase,
-                       scpBase,
-                       "bioc::scpdata",
-                       "peakRAM"))
+# envCreate("base",
+#           packages = c(MultiAssayExperimentBase,
+#                        QFeaturesBase,
+#                        scpBase,
+#                        "bioc::scpdata",
+#                        "peakRAM"))
 
 # envCreate("subsetByColData",
 #           packages = c(subsetByColDataOpti,
@@ -27,21 +27,23 @@ envCreate("aggregation",
                        QFeaturesAgg,
                        scpBase,
                        "bioc::scpdata",
-                       "peakRAM"))
+                       "peakRAM",
+                       "profvis"))
 
-envCreate("aggregation2",
-          packages = c(MultiAssayExperimentBase,
-                       QFeaturesAgg2,
-                       scpBase,
-                       "bioc::scpdata",
-                       "peakRAM"))
+# envCreate("aggregation2",
+#           packages = c(MultiAssayExperimentBase,
+#                        QFeaturesAgg2,
+#                        scpBase,
+#                        "bioc::scpdata",
+#                        "peakRAM"))
 
 envCreate("scpOpti",
           packages = c(MultiAssayExperimentBase,
                        QFeaturesBase,
                        scpOpti,
                        "bioc::scpdata",
-                       "peakRAM"))
+                       "peakRAM",
+                       "profvis"))
 
 # envCreate("allOpti",
 #           packages = c(subsetByColDataOpti,
@@ -54,23 +56,28 @@ envCopyTo(file.path("R", "scriptVerR.R"),
           targetPath = file.path("R", "scriptVerR.R")
 )
 
-envCopyTo(file.path("R", "minimumWorkflow.R"),
-          targetPath = file.path("R", "minimumWorkflow.R"))
-noSub <- runInEnv({
-    source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 1, subsetRowData = FALSE)
-})
-noSub <- bind_rows(noSub, .id = "version")
-
-write.csv(noSub, file = "dataOutput/optimisationsBench/noSubsetRowData.csv")
+# envCopyTo(file.path("R", "minimumWorkflow.R"),
+#           targetPath = file.path("R", "minimumWorkflow.R"))
+# noSub <- runInEnv({
+#     source(file.path("R", "scriptVerR.R"))
+#     benchWrapper(replicate = 1, subsetRowData = FALSE)
+# })
+# noSub <- bind_rows(noSub, .id = "version")
+#
+# write.csv(noSub, file = "dataOutput/optimisationsBench/noSubsetRowData.csv")
 
 sub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 1, subsetRowData = TRUE)
+    leduc <- scpdata::leduc2022_pSCoPE()[,,1:50]
+    res <- list()
+    res[["scp"]] <- profvis::profvis(aggregatePSM(leduc))
+    res[["QFeat"]] <- profvis::profvis(aggregatePSMscp(leduc))
+    res
 })
 
-sub <- bind_rows(sub, .id = "version")
-
-write.csv(sub, file = "dataOutput/optimisationsBench/subsetRowData.csv")
+saveRDS(sub,  "dataOutput/optimisationsBench/prof.rds")
+# sub <- bind_rows(sub, .id = "version")
+#
+# write.csv(sub, file = "dataOutput/optimisationsBench/subsetRowData.csv")
 
 unlink(".envs", recursive = TRUE, force = TRUE)

@@ -16,10 +16,12 @@ sub <- sub %>%
 ggplot(noSub, aes(x = numNAssay, y = Elapsed_Time_sec, colour = version)) +
     geom_point() +
     geom_smooth(method = "lm", se = TRUE, aes(group = version)) +
-    labs(x = "nAssay (numeric)", y = "Elapsed Time (sec)", title = "Performance Growth for noSub")
+    labs(x = "nAssay (numeric)", y = "Elapsed Time (sec)", title = "Performance Growth for noSub") +
+    facet_wrap(~Function_Call)
 
 ggplot(sub, aes(x = numNAssay, y = Elapsed_Time_sec, colour = version)) +
     geom_point() +
     geom_smooth(method = "lm", se = FALSE, aes(group = version)) +
-    labs(x = "nAssay (numeric)", y = "Elapsed Time (sec)", title = "Performance Growth for sub")
+    labs(x = "nAssay (numeric)", y = "Elapsed Time (sec)", title = "Performance Growth for sub")+
+    facet_wrap(~Function_Call)
 
