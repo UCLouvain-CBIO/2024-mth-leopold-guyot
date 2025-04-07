@@ -4,7 +4,7 @@ MultiAssayExperimentBase <- "waldronlab/MultiAssayExperiment@325c85ca26582027bcd
 subsetByColDataOpti <- "waldronlab/MultiAssayExperiment@a293ab1fd1d5ac6671a4fb7a6cc91d14b21d0758"
 QFeaturesBase <- "rformassspectrometry/QFeatures@dc229a06c4feb7f61d1bc1ad7c9d626d58deb93a"
 QFeaturesAgg <- "rformassspectrometry/QFeatures@9299c7bf86b9598a4db49e04f76e999cdfdd4952"
-QFeaturesAgg2 <- "leopoldguyot/QFeatures@bc3660fc364bbd0c40bdef46f3031253e64918d3"
+QFeaturesAgg2 <- "leopoldguyot/QFeatures@333786236576d393d84415280ee563cd6d953469"
 scpBase <- "UCLouvain-CBIO/scp@8818589510ffd69673b533f614fc3f3eb7f9598d"
 scpOpti <- "leopoldguyot/scp@68de84b559f1e92b31d1190c1add678914012e87"
 
@@ -22,12 +22,12 @@ envCreate("base",
 #                        "bioc::scpdata",
 #                        "peakRAM"))
 
-envCreate("aggregation",
-          packages = c(MultiAssayExperimentBase,
-                       QFeaturesAgg,
-                       scpBase,
-                       "bioc::scpdata",
-                       "peakRAM"))
+# envCreate("aggregation",
+#           packages = c(MultiAssayExperimentBase,
+#                        QFeaturesAgg,
+#                        scpBase,
+#                        "bioc::scpdata",
+#                        "peakRAM"))
 
 envCreate("aggregation2",
           packages = c(MultiAssayExperimentBase,
