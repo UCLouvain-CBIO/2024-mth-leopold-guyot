@@ -22,12 +22,12 @@ envCreate("base",
 #                        "bioc::scpdata",
 #                        "peakRAM"))
 
-# envCreate("aggregation",
-#           packages = c(MultiAssayExperimentBase,
-#                        QFeaturesAgg,
-#                        scpBase,
-#                        "bioc::scpdata",
-#                        "peakRAM"))
+ envCreate("aggregation",
+           packages = c(MultiAssayExperimentBase,
+                        QFeaturesAgg,
+                        scpBase,
+                        "bioc::scpdata",
+                        "peakRAM"))
 
 envCreate("aggregation2",
           packages = c(MultiAssayExperimentBase,
@@ -36,12 +36,12 @@ envCreate("aggregation2",
                        "bioc::scpdata",
                        "peakRAM"))
 
-envCreate("scpOpti",
-          packages = c(MultiAssayExperimentBase,
-                       QFeaturesBase,
-                       scpOpti,
-                       "bioc::scpdata",
-                       "peakRAM"))
+#envCreate("scpOpti",
+#          packages = c(MultiAssayExperimentBase,
+#                       QFeaturesBase,
+#                       scpOpti,
+#                       "bioc::scpdata",
+#                       "peakRAM"))
 
 # envCreate("allOpti",
 #           packages = c(subsetByColDataOpti,

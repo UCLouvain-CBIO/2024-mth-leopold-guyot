@@ -28,8 +28,7 @@ benchWrapper <- function(replicate, subset_sizes = c(10, 30, 60), subsetRowData 
             res <- peakRAM(
                 # leduc <- filterRow(leduc),
                 # leduc <- filterCol(leduc),
-                aggregatePSM(leduc),
-                aggregatePSMscp(leduc)
+                aggregatePSM(leduc)
             )
             res$replicate <- i
             res$subset_size <- size
