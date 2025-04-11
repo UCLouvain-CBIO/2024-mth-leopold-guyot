@@ -5,7 +5,7 @@ library(peakRAM)
 library(scp)
 library(scpdata)
 
-benchWrapper <- function(replicate, subset_sizes = c(30, 60, 120), subsetRowData = FALSE) {
+benchWrapper <- function(replicate, subset_sizes = c(30, 60), subsetRowData = FALSE) {
     results_list <- list()
 
     for (size in subset_sizes) {
@@ -26,8 +26,8 @@ benchWrapper <- function(replicate, subset_sizes = c(30, 60, 120), subsetRowData
 
         results <- do.call(rbind, lapply(1:replicate, function(i) {
             res <- peakRAM(
-                # leduc <- filterRow(leduc),
-                # leduc <- filterCol(leduc),
+                leduc <- filterRow(leduc),
+                leduc <- filterCol(leduc),
                 aggregatePSM(leduc)
             )
             res$replicate <- i
