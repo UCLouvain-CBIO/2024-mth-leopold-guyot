@@ -16,21 +16,61 @@ sub <- sub %>%
     mutate(sub = "sub")
 
 combined <- rbind(sub, noSub) %>%
+    filter(nAssay == 60) %>%
     group_by(sub, Function_Call, version, numNAssay) %>%
-    summarise("medianTime" = median(Elapsed_Time_sec))
+    summarise("medianTime" = median(Elapsed_Time_sec)) %>%
+    mutate(opti = paste(sub, version, sep = "_")) %>%
+    filter(opti %in% c("noSub_aggregation",
+                            "noSub_base",
+                            "noSub_subsetByColData",
+                            "sub_base",
+                            "sub_allOpti")) %>%
+    mutate(opti = factor(opti, levels = c(
+        "noSub_base",
+        "noSub_subsetByColData",
+        "noSub_aggregation",
+        "sub_base",
+        "sub_allOpti"
+    )))
+combinedRAM <- rbind(sub, noSub) %>%
+    filter(nAssay == 60) %>%
+    group_by(sub, Function_Call, version, numNAssay) %>%
+    summarise("peakRam" = max(Peak_RAM_Used_MiB)) %>%
+    mutate(opti = paste(sub, version, sep = "_")) %>%
+    filter(opti %in% c("noSub_aggregation",
+                       "noSub_base",
+                       "noSub_subsetByColData",
+                       "sub_base",
+                       "sub_allOpti")) %>%
+    mutate(opti = factor(opti, levels = c(
+        "noSub_base",
+        "noSub_subsetByColData",
+        "noSub_aggregation",
+        "sub_base",
+        "sub_allOpti"
+    )))
 
-ggplot(noSub, aes(x = numNAssay, y = Elapsed_Time_sec, colour = version)) +
-    geom_point() +
-    geom_smooth(method = "lm", se = TRUE, aes(group = version)) +
-    labs(x = "nAssay (numeric)", y = "Elapsed Time (sec)", title = "Performance Growth for noSub") +
-    facet_wrap(~Function_Call)
+combinedUsedRAM <- rbind(sub, noSub) %>%
+    filter(nAssay == 60) %>%
+    group_by(sub, Function_Call, version, numNAssay) %>%
+    summarise("usedRam" = median(Total_RAM_Used_MiB)) %>%
+    mutate(opti = paste(sub, version, sep = "_")) %>%
+    filter(opti %in% c("noSub_aggregation",
+                       "noSub_base",
+                       "noSub_subsetByColData",
+                       "sub_base",
+                       "sub_allOpti")) %>%
+    mutate(opti = factor(opti, levels = c(
+        "noSub_base",
+        "noSub_subsetByColData",
+        "noSub_aggregation",
+        "sub_base",
+        "sub_allOpti"
+    )))
 
-ggplot(sub, aes(x = numNAssay, y = Elapsed_Time_sec, colour = version)) +
-    geom_point() +
-    geom_smooth(method = "lm", se = FALSE, aes(group = version)) +
-    labs(x = "nAssay (numeric)", y = "Elapsed Time (sec)", title = "Performance Growth for sub")+
-    facet_wrap(~Function_Call)
-
-ggplot(combined, aes(x = numNAssay, y = medianTime, colour = version))+
-    geom_point() +
-    facet_wrap(~sub)
+ggplot(combined, aes(x = opti, y = medianTime, colour = Function_Call))+
+    geom_col(aes(fill = Function_Call))
+ggplot(combinedRAM, aes(x = opti, y = peakRam, colour = Function_Call))+
+    geom_col(aes(fill = Function_Call))
+ggplot(combinedUsedRAM, aes(x = opti, y = usedRam, colour = Function_Call))+
+    geom_col(aes(fill = Function_Call))

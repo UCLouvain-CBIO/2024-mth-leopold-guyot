@@ -36,7 +36,7 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
     new_colData <- colData(se) %>%
         as.data.frame() %>%
         group_by(Group) %>%
-        summarise(across(all_of(group_by_cols), first), .groups = "drop") %>%
+        summarise(across(all_of(group_by_cols), dplyr::first), .groups = "drop") %>%
         as.data.frame()
 
     rownames(new_colData) <- new_colData$Group
@@ -49,6 +49,7 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
 aggSE <- aggregate_se(sceBalanced, c("Set", "Mock"))
 
 aggSEmd <- scpModelWorkflow(aggSE, ~ Set + Mock)
+aggSEmd2 <- scpModelWorkflow(aggSE, ~ Mock)
 
 daAggRes <- scpDifferentialAnalysis(
     aggSEmd,
@@ -57,9 +58,20 @@ daAggRes <- scpDifferentialAnalysis(
     as.data.frame() %>%
     filter(padj <= 0.05)
 
-resAggNames <- daAggRes$feature
+daAggRes2 <- scpDifferentialAnalysis(
+    aggSEmd2,
+    contrasts = list(c("Mock", "mock2", "mock1"))
+)[[1]] %>%
+    as.data.frame() %>%
+    filter(padj <= 0.05)
 
-listUpSet <- list("model" = resNames,"aggModel" = resAggNames, "real" = trueNames)
+resAggNames <- daAggRes$feature
+resAggNames2 <- daAggRes2$feature
+
+
+listUpSet <- list("model" = resNames,
+                  "aggModel" = resAggNames,
+                  "real" = trueNames)
 upset(fromList(listUpSet), order.by = "freq")
 saveRDS(listUpSet, "dataOutput/pseudoBulk/listUpSet.rds")
 
