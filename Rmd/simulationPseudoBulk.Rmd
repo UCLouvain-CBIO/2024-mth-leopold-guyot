@@ -1,0 +1,140 @@
+
+## Packages
+```{r}
+library(scpdata)
+library(scp)
+library(tidyverse)
+```
+## Simulation parameters
+
+```{r}
+set.seed(123)
+# number of patients
+nPatient = 4
+# Cells by patient
+nCellPatient = 50
+
+nCellTot = nPatient * nCellPatient
+# Inter-patient variability
+patientSD <- 0.3
+```
+
+## Data
+
+Prepare base data obtained from Brunner et al. 2022:
+Single cell proteomics data acquired by the Mann Lab using a newly designed timsTOF instrument, referred to as timsTOF-SCP. The dataset contains quantitative information from single-cells blocked at 4 cell cycle stages: G1, G1-S, G2, G2-M. The data was acquired using a label-free sample preparation protocole combined to a data independent (DIA) acquisition mode.
+
+We subset the PSM data for the Untreated cell group.
+Then we apply a log2 transformation to have the intensities disitributed normally.
+```{r}
+base <- scpdata::brunner2022()
+sce <- getWithColData(base, "proteins")
+sce <- sce[, colData(sce)$CellCycleStage == "UB"]
+sce <- logTransform(sce) # log transform to obtain normal intensities distribution
+
+```
+
+## Intensity distribution
+```{r}
+int_mat <- assay(sce)
+
+# 2. Convert to a vector (flatten all protein × cell values)
+int_vec <- as.vector(int_mat)
+
+# 3. Remove missing values
+int_vec <- int_vec[!is.na(int_vec)]
+
+# 4. Plot distribution
+ggplot(data.frame(intensity = int_vec), aes(x = intensity)) +
+  geom_histogram(bins = 100, fill = "steelblue", color = "white") +
+  theme_minimal() +
+  labs(title = "Distribution of protein intensities across all cells",
+       x = "Intensity", y = "Frequency")
+```
+## Get intensities metrics
+```{r}
+protAssay <- as.data.frame(assay(sce))
+
+# Compute metric
+meanIntensity <- rowMeans(protAssay, na.rm = TRUE)
+sdIntensity <- apply(protAssay, 1, sd, na.rm = TRUE)
+pctMissing <- rowMeans(is.na(protAssay)) * 100
+
+# Add metrics and feature names into one data frame
+protMetrics <- data.frame(
+  protNames = rownames(protAssay),
+  meanIntensity = meanIntensity,
+  sdIntensity = sdIntensity,
+  pctMissing = pctMissing,
+  stringsAsFactors = FALSE
+)
+head(protMetrics)
+```
+## Intensities metrics distribution
+
+```{r}
+protMetrics_long <- protMetrics %>%
+  pivot_longer(cols = c(meanIntensity, sdIntensity, pctMissing),
+               names_to = "metric",
+               values_to = "value")
+
+# Plot distribution for each metric
+ggplot(protMetrics_long, aes(x = value)) +
+  geom_histogram(bins = 60, fill = "steelblue", color = "white") +
+  facet_wrap(~ metric, scales = "free", ncol = 1) +
+  theme_minimal() +
+  labs(title = "Distribution of per-protein metrics",
+       x = "Value", y = "Count")
+```
+## Simulation
+
+```{r}
+# Extract mean values
+mu <- protMetrics$meanIntensity
+proteinNames <- protMetrics$protNames
+residualSD <- protMetrics$sdIntensity
+missingProb <- protMetrics$pctMissing/100
+nProt <- length(mu)
+
+# Initialize matrix
+simMatrix <- matrix(NA, nrow = nProt, ncol = nCellTot)
+rownames(simMatrix) <- proteinNames
+cellIds <- paste0("P", rep(1:nPatient, each = nCellPatient), "_C", 1:nCellTot)
+colnames(simMatrix) <- cellIds
+
+# Prepare colData dataframe
+
+colData <- data.frame(
+  cellId = colnames(simMatrix),
+  patient = sub("_.*", "", colnames(simMatrix)),
+  patientShift = numeric(nCellTot),
+  stringsAsFactors = FALSE
+)
+
+cellCounter <- 1
+# Simulate
+for (i in 1:nPatient) {
+  # simulate patient effect
+  patientShift <- rnorm(nProt, mean = 0, sd = patientSD)
+  
+  for (j in 1:nCellPatient) {
+    cellIndex <- (i - 1) * nCellPatient + j
+    colData$patientShift[cellCounter] <- patientShift
+    # simulate noise
+    noise <- rnorm(nProt, mean = 0, sd = residualSD)
+    
+    # final simulated intensity
+    simMatrix[, cellIndex] <- mu + patientShift + noise
+    
+    cellCounter <- cellCounter + 1
+  }
+}
+
+# Add missing values
+
+for (p in seq_len(nProt)) {
+  missing <- runif(nCellTot) < missingProb[p]
+  simMatrix[p, missing] <- NA
+}
+```
+
