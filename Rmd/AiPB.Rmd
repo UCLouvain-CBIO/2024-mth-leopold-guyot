@@ -1,0 +1,116 @@
+---
+title: "AiPB"
+output: html_document
+---
+
+```{r}
+library(scpdata)
+library(scp)
+library(tidyverse)
+```
+
+```{r}
+ai <- scpdata::ai2025a()
+ai
+```
+
+```{r}
+precursors_log <- getWithColData(ai, "precursors_log")
+precursors_log
+```
+## scplainer
+
+```{r}
+sce <- precursors_log[, precursors_log$HeartLocation %in% c("Lvendo", "Lvepi")]
+sce <- 
+sce <- scpModelWorkflow(
+    sce,
+    formula = ~ 1 + ## intercept
+        ## normalisation
+        MedianIntensity +
+        ## batch effects
+        PlateRow +
+        Subject +
+        ## biological variability
+        HeartLocation,
+    verbose = FALSE)
+scpModelFilterThreshold(sce) <- 3
+```
+
+```{r}
+daRes <- scpDifferentialAnalysis(
+     sce, contrasts = list(c("HeartLocation", "Lvendo", "Lvepi"))
+ )
+
+daRes <- scpAnnotateResults(
+        daRes, rowData(sce),
+        by = "feature", by2 = "Precursor.Id")
+
+scpVolcanoPlot(daRes,
+               textBy = "Protein.Names",
+               pointParams = list(aes(colour = Lib.Q.Value)))[[1]]
+```
+
+
+## Aggregation
+
+```{r}
+aggregate_se <- function(se, group_by_cols, fun = mean) {
+    if (!all(group_by_cols %in% colnames(colData(se)))) {
+        stop("Some specified group_by_cols do not exist in colData.")
+    }
+
+    colData(se)$Group <- apply(colData(se)[, group_by_cols, drop = FALSE], 1, paste, collapse = "_")
+    group_factor <- factor(colData(se)$Group)
+    assay_matrix <- assay(se)
+
+    aggregated_assay <- do.call(cbind, lapply(split(seq_along(group_factor), group_factor),
+                                              function(idx) apply(assay_matrix[, idx, drop = FALSE], 1, fun, na.rm = TRUE)))
+
+    new_colData <- colData(se) %>%
+        as.data.frame() %>%
+        group_by(Group) %>%
+        summarise(across(all_of(group_by_cols), dplyr::first), .groups = "drop") %>%
+        as.data.frame()
+
+    rownames(new_colData) <- new_colData$Group
+
+    new_se <- SummarizedExperiment(assays = list(counts = aggregated_assay), colData = new_colData,
+                                   rowData = rowData(se))
+
+    return(new_se)
+}
+```
+
+```{r}
+scePB <- precursors_log[, precursors_log$HeartLocation %in% c("Lvendo", "Lvepi")]
+
+scePB <- aggregate_se(se = sce,
+             group_by_cols = c("HeartLocation", "Subject"),
+             fun = mean)
+scePB
+
+scePB <- scpModelWorkflow(
+    scePB,
+    formula = ~ 1 + 
+        Subject +
+        HeartLocation,
+    verbose = FALSE)
+
+
+
+daResPB <- scpDifferentialAnalysis(
+     scePB, contrasts = list(c("HeartLocation", "Lvendo", "Lvepi"))
+ )
+
+daResPB <- scpAnnotateResults(
+        daResPB, rowData(scePB),
+        by = "feature", by2 = "Precursor.Id")
+
+scpVolcanoPlot(daResPB,
+               textBy = "Protein.Names",
+               pointParams = list(aes(colour = Lib.Q.Value)))[[1]]
+```
+
+
+
