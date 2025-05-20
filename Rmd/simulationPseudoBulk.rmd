@@ -1,0 +1,528 @@
+---
+title: "Simulation for PseudoBulk Benchmarking"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: 
+    mathjax: default
+---
+
+## Packages
+```{r packages, message = FALSE}
+library(scpdata)
+library(scp)
+library(SingleCellExperiment)
+library(msqrob2)
+library(iCOBRA)
+library(UpSetR)
+library(tidyverse)
+```
+# Simulation strategy
+
+## Experimental Data
+To generate our data, we will use the dataset obtained from Brunner et al. 2022. (Label-Free). We will isolate only one condition (Untreated). For this condition we compute for each protein; his mean log-intensity and his standard deviation
+
+## Intensities modelling
+
+Let \( X_{ij} \) denote the log-intensity of protein \( i \) in cell \( j \).
+
+We model the log-intensity as:
+
+$$
+X_{ij} = \mu_i + \epsilon_{ij} + A^{\text{patient}}_i \cdot \delta^{\text{patient}}_{i, p_j} 
++ A^{\text{subtype}}_i \cdot \delta^{\text{subtype}}_{i, s_j}
++ A^{\text{treatment}}_i \cdot \delta^{\text{treatment}}_i \cdot \mathbb{I}_{t_j = 1}
+$$
+
+Where:
+
+- \( \mu_i \): baseline log-intensity of protein \( i \) obtained from experimental data
+- \( \epsilon_{ij} \sim \mathcal{N}(0, \sigma_i^2) \): residual noise obtained from experimental data
+- \( A^{\text{patient}}_i \): indicator if protein \( i \) is affected by patient-specific shifts  
+- \( A^{\text{subtype}}_i \): indicator if protein \( i \) is affected by subtype-specific shifts  
+- \( A^{\text{treatment}}_i \): indicator if protein \( i \) is affected by treatment  
+- \( p_j \in \{1, \ldots, P\} \): patient identity of cell \( j \)  
+- \( s_j \in \{1, \ldots, S\} \): subtype identity of cell \( j \)  
+- \( t_j \in \{0,1\} \): treatment status of cell \( j \) (1 = treated)  
+- \( \delta^{\text{patient}}_{i, p} \sim \mathcal{N}(0, \sigma_{\text{patient}}^2) \): patient-specific shift for protein \( i \) and patient \( p \)  
+- \( \delta^{\text{subtype}}_{i, s} \sim \mathcal{N}(0, \sigma_{\text{subtype}}^2) \): subtype-specific shift for protein \( i \) and subtype \( s \)  
+- \( \delta^{\text{treatment}}_i \sim \mathcal{N}(0, \sigma_{\text{treatment}}^2) \): treatment effect for protein \( i \)  
+- \( \mathbb{I}_{t_j = 1} \): indicator function equals 1 if cell \( j \) is treated, 0 otherwise
+
+### Missing Data Modelling
+
+Each \( X_{ij} \) is observed with probability \( 1 - \pi_i \), where:
+
+$$
+M_{ij} \sim \text{Bernoulli}(\pi_i)
+$$
+
+If \( M_{ij} = 1 \), then \( X_{ij} = \text{NA} \).
+
+Where \( \pi_i \) is the experimentally observed missing rate of protein \( i \) .
+
+
+## Simulation parameters
+
+```{r parameters}
+# number of patients
+nPatient = 16
+
+# Number of cell population
+nCellSubtype <- 5
+
+# Cells by patient/subtype
+nCellPatientSub = 50
+
+subtypeNames <- paste0("Type", seq_len(nCellSubtype))
+
+nCellTot = nPatient * nCellSubtype * nCellPatientSub
+
+# Inter-patient variability
+patientSD <- 0.5
+
+# Prop of proteins shifted by patient effect
+
+patientEffect <- 0.7
+
+# Inter-population variability
+subtypeSD <- 1
+
+# Prop of proteins shifted by subtype effect
+
+subtypeEffect <- 0.4
+
+# proportion of proteins affected by treatment
+treatmentEffect <- 0.3
+
+# treatment shift strength
+treatmentStrength <- 1  
+
+```
+
+## Experimental Data
+
+Prepare base data obtained from Brunner et al. 2022:
+Single cell proteomics data acquired by the Mann Lab using a newly designed timsTOF instrument, referred to as timsTOF-SCP. The dataset contains quantitative information from single-cells blocked at 4 cell cycle stages: G1, G1-S, G2, G2-M. The data was acquired using a label-free sample preparation protocole combined to a data independent (DIA) acquisition mode.
+
+We subset the PSM data for the Untreated cell group.
+Then we apply a log2 transformation to have the intensities disitributed normally.
+```{r baseData}
+base <- scpdata::brunner2022()
+sce <- getWithColData(base, "proteins")
+sce <- sce[, colData(sce)$CellCycleStage == "UB"]
+sce <- logTransform(sce) # log transform to obtain normal intensities distribution
+sce <- sce[rowSums(!is.na(assay(sce))) > 1, ]
+sce
+```
+
+## Intensity distribution
+```{r intensityDistReal}
+int_mat <- assay(sce)
+int_vec <- as.vector(int_mat)
+int_vec <- int_vec[!is.na(int_vec)]
+ggplot(data.frame(intensity = int_vec), aes(x = intensity)) +
+  geom_histogram(bins = 100, fill = "steelblue", color = "white") +
+  theme_minimal() +
+  labs(title = "Distribution of protein log-intensities across all cells",
+       x = "Intensity", y = "Frequency")
+```
+## Get log-intensities metrics
+```{r intMetrics}
+protAssay <- as.data.frame(assay(sce))
+
+# Compute metric
+meanIntensity <- rowMeans(protAssay, na.rm = TRUE)
+sdIntensity <- apply(protAssay, 1, sd, na.rm = TRUE)
+pctMissing <- rowMeans(is.na(protAssay)) * 100
+
+protMetrics <- data.frame(
+  protNames = rownames(protAssay),
+  meanIntensity = meanIntensity,
+  sdIntensity = sdIntensity,
+  pctMissing = pctMissing,
+  stringsAsFactors = FALSE
+)
+head(protMetrics)
+```
+## Intensities metrics distribution
+
+```{r metricsDist}
+protMetrics_long <- protMetrics %>%
+  pivot_longer(cols = c(meanIntensity, sdIntensity, pctMissing),
+               names_to = "metric",
+               values_to = "value")
+
+ggplot(protMetrics_long, aes(x = value)) +
+  geom_histogram(bins = 60, fill = "steelblue", color = "white") +
+  facet_wrap(~ metric, scales = "free", ncol = 1) +
+  theme_minimal() +
+  labs(title = "Distribution of per-protein metrics",
+       x = "Value", y = "Count")
+```
+
+## Simulation (patient and subtype pattern)
+```{r extractMetrics}
+mu <- protMetrics$meanIntensity
+proteinNames <- protMetrics$protNames
+residualSD <- protMetrics$sdIntensity
+missingProb <- protMetrics$pctMissing/100
+nProt <- length(mu)
+```
+
+```{r iniMatrix}
+# Initialize matrix
+simMatrix <- matrix(NA, nrow = nProt, ncol = nCellTot)
+rownames(simMatrix) <- proteinNames
+cellIds <- paste0("P", rep(1:nPatient, each = nCellPatientSub), "_C", 1:nCellTot)
+colnames(simMatrix) <- cellIds
+
+subtypeEffects <- matrix(
+  rnorm(nProt * nCellSubtype, mean = 0, sd = subtypeSD),
+  nrow = nProt,
+  ncol = nCellSubtype,
+  dimnames = list(proteinNames, subtypeNames)
+)
+```
+
+```{r shiftProtDef}
+nPatientShiftProt <- floor(patientEffect * nProt)
+nSubtypeShiftProt <- floor(subtypeEffect * nProt)
+```
+
+```{r prepColData}
+# Prepare colData dataframe
+subtypesPerPatient <- rep(subtypeNames, each = nCellPatientSub)
+allSubtypes <- rep(subtypesPerPatient, times = nPatient)
+
+patients <- sub("_.*", "", colnames(simMatrix))
+
+colData <- data.frame(
+  cellId = colnames(simMatrix),
+  patient = patients,
+  subtype = allSubtypes,
+  patientShift = numeric(nCellTot),
+  subtypeShift = numeric(nCellTot),
+  stringsAsFactors = FALSE
+)
+```
+
+```{r simulation}
+cellCounter <- 1
+
+# Simulate
+for (i in 1:nPatient) {
+  patientShift <- numeric(nProt)
+  names(patientShift) <- proteinNames
+  # Choose which proteins will receive the shift
+  patientShiftProteins <- sample(proteinNames, nPatientShiftProt)
+  patientShift[patientShiftProteins] <- rnorm(nPatientShiftProt, mean = 0, sd = patientSD)
+  
+  for (s in 1:nCellSubtype) {
+    subtypeShiftProteins <- sample(proteinNames, nSubtypeShiftProt)
+    subtypeName <- subtypeNames[s]
+    # Extract subtype effect for all proteins
+    subtypeShiftFull <- subtypeEffects[, subtypeName]
+    
+    # Zero out subtype shifts for proteins NOT in the sampled subset
+    subtypeShift <- numeric(nProt)
+    names(subtypeShift) <- proteinNames
+    subtypeShift[subtypeShiftProteins] <- subtypeShiftFull[subtypeShiftProteins]
+    for (k in 1:nCellPatientSub) {
+      cellIndex <- cellCounter
+      colData$patientShift[cellIndex] <- list(patientShift)
+      colData$subtypeShift[cellIndex] <- list(subtypeShift)
+      simMatrix[, cellIndex] <- rnorm(nProt, mean = mu, sd = residualSD) + patientShift + subtypeShift
+      
+      colData$subtype[cellIndex] <- subtypeName
+      
+      cellCounter <- cellCounter + 1
+    }
+  }
+}
+```
+
+## Simulate data missingness
+```{r simulateNA}
+# Add missing values
+
+for (p in seq_len(nProt)) {
+  missing <- runif(nCellTot) < missingProb[p]
+  simMatrix[p, missing] <- NA
+}
+```
+
+Should the sampling of shifted proteins be the same for all patients/celltypes?
+
+## Create the SingleCellExperiment object
+
+```{r buildSCE}
+simSCE <- SingleCellExperiment(assays = SimpleList(simMatrix),
+                     rowData = rowData(sce),
+                     colData = colData)
+simSCE
+
+```
+
+## Add treatment effect
+
+```{r addTreatmentToColData}
+# Initialize treatment vector
+treatment_vector <- character(ncol(simSCE))
+names(treatment_vector) <- colnames(simSCE)
+
+# Get colData
+cd <- colData(simSCE)
+
+# Loop over each patient-subtype group
+for (p in unique(cd$patient)) {
+  for (s in unique(cd$subtype)) {
+    # Find cell indices in this group
+    group_cells <- which(cd$patient == p & cd$subtype == s)
+    
+    # Shuffle and assign 50% treated, 50% control
+    n_group <- length(group_cells)
+    n_treat <- floor(n_group / 2)
+    
+    treated_cells <- sample(group_cells, size = n_treat)
+    control_cells <- setdiff(group_cells, treated_cells)
+    
+    treatment_vector[treated_cells] <- "treated"
+    treatment_vector[control_cells] <- "control"
+  }
+}
+
+# Assign to colData
+colData(simSCE)$treatment <- treatment_vector
+```
+
+```{r addTreatEffect}
+# Select affected proteins
+nProt <- nrow(simSCE)
+proteinNames <- rownames(simSCE)
+nAffected <- floor(treatmentEffect * nProt)
+affected_proteins <- sample(proteinNames, size = nAffected, replace = FALSE)
+
+# Simulate shift per affected protein
+treatment_shift_vec <- numeric(nProt)
+names(treatment_shift_vec) <- proteinNames
+treatment_shift_vec[affected_proteins] <- rnorm(nAffected, mean = 0, sd = treatmentStrength)
+
+# Modify assay
+exprMat <- assay(simSCE)
+treated_cells <- colData(simSCE)$treatment == "treated"
+
+# Apply shift: add the same shift for each affected protein across treated cells
+exprMat[affected_proteins, treated_cells] <- exprMat[affected_proteins, treated_cells] +
+  treatment_shift_vec[affected_proteins]
+
+# Save modified matrix back
+assay(simSCE) <- exprMat
+
+rowData(simSCE)$treatmentAffected <- rownames(simSCE) %in% affected_proteins
+rowData(simSCE)$treatmentShift <- treatment_shift_vec
+```
+
+```{r showData}
+simSCE
+```
+
+## Plot new distribution of log-intensities
+
+```{r intDistSim}
+int_mat <- assay(simSCE)
+int_vec <- as.vector(int_mat)
+int_vec <- int_vec[!is.na(int_vec)]
+ggplot(data.frame(intensity = int_vec), aes(x = intensity)) +
+  geom_histogram(bins = 100, fill = "steelblue", color = "white") +
+  theme_minimal() +
+  labs(title = "Distribution of protein log-intensities across all cells",
+       x = "Intensity", y = "Frequency")
+```
+
+
+## Apply scplainer
+
+```{r scplainer}
+scpSIM <- scpModelWorkflow(simSCE, formula = ~ 1 + patient + subtype + treatment, verbose = FALSE)
+scpRes <- scpDifferentialAnalysis(
+    scpSIM,
+    contrasts = list(c("treatment", "control", "treated"))
+)[[1]]
+```
+## Apply msqrob2
+```{r defineContrast}
+L <- makeContrast("treatmenttreated=0", parameterNames = c("treatmenttreated"))
+```
+
+```{r msqrob2}
+msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ 1 + patient + subtype + treatment))
+msqRes <- rowData(hypothesisTest(object = msqSIM, contrast = L))$treatmenttreated
+```
+
+## Apply PseudoBulk + msqrob2
+
+```{r pseudobulk}
+aggregate_se <- function(se, group_by_cols, fun = mean) {
+    if (!all(group_by_cols %in% colnames(colData(se)))) {
+        stop("Some specified group_by_cols do not exist in colData.")
+    }
+    colData(se)$Group <- apply(colData(se)[, group_by_cols, drop = FALSE], 1, paste, collapse = "_")
+    group_factor <- factor(colData(se)$Group)
+    assay_matrix <- assay(se)
+
+    # Aggregate assay matrix by group_factor levels order
+    grouped_indices <- split(seq_along(group_factor), group_factor)
+    levels_group <- levels(group_factor)  # factor levels in order
+    aggregated_assay <- do.call(cbind, lapply(levels_group,
+                                              function(g) {
+                                                  idx <- grouped_indices[[g]]
+                                                  apply(assay_matrix[, idx, drop = FALSE], 1, fun, na.rm = TRUE)
+                                              }))
+    new_colData <- colData(se) %>%
+        as.data.frame() %>%
+        group_by(Group) %>%
+        summarise(across(all_of(group_by_cols), dplyr::first), .groups = "drop") %>%
+        as.data.frame()
+    # Reorder new_colData rows to match factor levels
+    new_colData <- new_colData[match(levels_group, new_colData$Group), ]
+    rownames(new_colData) <- new_colData$Group
+    new_se <- SummarizedExperiment(assays = list(aggregated_assay),
+                                   colData = new_colData,
+                                   rowData = rowData(se))
+    return(new_se)
+}
+
+
+pbSIM <- aggregate_se(simSCE, c("patient", "subtype", "treatment"), fun = mean)
+pbSIM <- suppressWarnings(msqrob(pbSIM, ~ 1 + patient + subtype + treatment))
+pbRes <- rowData(hypothesisTest(object = pbSIM, contrast = L))$treatmenttreated
+```
+
+# Get FDR curves
+
+```{r pvalDF}
+# Extract p-values from each result
+pval_pb <- pbRes[, "pval", drop = FALSE]
+colnames(pval_pb) <- "PBmsqrob2"
+
+pval_msq <- msqRes[, "pval", drop = FALSE]
+colnames(pval_msq) <- "msqrob2"
+
+pval_scp <- as.data.frame(scpRes[, c("feature", "pvalue")])
+colnames(pval_scp) <- c("feature", "scplainer")
+rownames(pval_scp) <- pval_scp$feature
+pval_scp$feature <- NULL
+
+# Merge all three by rownames (feature names)
+tmp1 <- merge(pval_pb, pval_msq, by = "row.names", all = TRUE)
+rownames(tmp1) <- tmp1$Row.names
+tmp1$Row.names <- NULL
+
+combined_pvals <- merge(tmp1, pval_scp, by = "row.names", all = TRUE)
+rownames(combined_pvals) <- combined_pvals$Row.names
+combined_pvals$Row.names <- NULL
+
+# Extract adjusted p-values from each result
+padj_pb <- pbRes[, "adjPval", drop = FALSE]
+colnames(padj_pb) <- "PBmsqrob2"
+
+padj_msq <- msqRes[, "adjPval", drop = FALSE]
+colnames(padj_msq) <- "msqrob2"
+
+padj_scp <- as.data.frame(scpRes[, c("feature", "padj")])
+colnames(padj_scp) <- c("feature", "scplainer")
+rownames(padj_scp) <- padj_scp$feature
+padj_scp$feature <- NULL
+
+# Merge all three by rownames (feature names)
+tmp_padj <- merge(padj_pb, padj_msq, by = "row.names", all = TRUE)
+rownames(tmp_padj) <- tmp_padj$Row.names
+tmp_padj$Row.names <- NULL
+
+combined_padj <- merge(tmp_padj, padj_scp, by = "row.names", all = TRUE)
+rownames(combined_padj) <- combined_padj$Row.names
+combined_padj$Row.names <- NULL
+```
+```{r truth}
+truth <- data.frame(isTreated = rowData(simSCE)$treatmentAffected,
+                    row.names = rownames(rowData(simSCE))
+                    )
+```
+
+```{r COBRAData}
+cobData <- COBRAData(
+  pval = combined_pvals,
+  padj = combined_padj,
+  truth = truth
+)
+
+perfRes <- calculate_performance(cobradata = cobData,
+                      binary_truth = "isTreated") %>%
+    fdrtpr() %>%
+    mutate(thr = as.numeric(sub("thr", "", thr)))
+```
+```{r plotFDRTPR}
+plot <- ggplot(perfRes, aes(x = FDR, y = TPR, color = method)) +
+    geom_vline(
+        xintercept = c(0.01, 0.05, 0.1),
+        linetype = "dashed", color = "grey50", size = 0.3
+    ) +
+    geom_point(size = 2.5, alpha = 0.8) +
+    geom_line(size = 0.7) +
+    scale_x_continuous(
+        trans = "sqrt",
+        limits = c(0, 1),
+        breaks = c(0.01, 0.05, 0.2, 0.4, 0.8, 1),
+        labels = scales::label_number()
+    ) +
+    scale_y_continuous(
+        limits = c(0, 1),
+        breaks = seq(0, 1, 0.2)
+    ) +
+    theme_minimal() +
+    labs(
+        title = "FDR vs TPR (square root x-axis)",
+        x = "False Discovery Rate (sqrt scale)",
+        y = "True Positive Rate",
+        color = "Method"
+    )
+plot
+```
+
+## Upset plot
+
+```{r upsetPlot}
+scpFeatures <- scpRes %>%
+    as.data.frame() %>%
+    filter(padj <= 0.05) %>% 
+    pull(feature)
+
+msqFeatures <- msqRes %>%
+    as.data.frame() %>%
+    filter(adjPval <= 0.05) %>% 
+    rownames()
+
+pbFeatures <- pbRes %>%
+    as.data.frame() %>%
+    filter(adjPval <= 0.05) %>% 
+    rownames()
+
+truthFeatures <- rowData(simSCE) %>%
+    as.data.frame() %>%
+    filter(treatmentAffected) %>% 
+    rownames()
+
+listUpSet <- list("scplainer" = scpFeatures,
+                  "msqrob2" = msqFeatures,
+                  "PseudoBulk" = pbFeatures,
+                  "truth" = truthFeatures)
+upset(fromList(listUpSet), order.by = "freq")
+```
+
+
+```{r session}
+sessionInfo()
+```
+
