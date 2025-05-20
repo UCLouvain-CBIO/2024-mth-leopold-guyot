@@ -1,22 +1,53 @@
+---
+title: "Simulation for PseudoBulk Benchmarking"
+author: "Léopold Guyot"
+date: "`r Sys.Date()`"
+output: html_document
+---
 
 ## Packages
-```{r}
+```{r, message = FALSE}
 library(scpdata)
 library(scp)
+library(SingleCellExperiment)
 library(tidyverse)
 ```
 ## Simulation parameters
 
 ```{r}
-set.seed(123)
 # number of patients
 nPatient = 4
-# Cells by patient
-nCellPatient = 50
 
-nCellTot = nPatient * nCellPatient
+# Number of cell population
+nCellSubtype <- 5
+
+# Cells by patient/subtype
+nCellPatientSub = 10
+
+subtypeNames <- paste0("Type", seq_len(nCellSubtype))
+
+nCellTot = nPatient * nCellSubtype * nCellPatientSub
+
 # Inter-patient variability
-patientSD <- 0.3
+patientSD <- 0.5
+
+# Prop of proteins shifted by patient effect
+
+patientEffect <- 0.7
+
+# Inter-population variability
+subtypeSD <- 1
+
+# Prop of proteins shifted by subtype effect
+
+subtypeEffect <- 0.4
+
+# proportion of proteins affected by treatment
+treatmentEffect <- 0.3
+
+# treatment shift strength
+treatmentStrength <- 1  
+
 ```
 
 ## Data
@@ -31,7 +62,8 @@ base <- scpdata::brunner2022()
 sce <- getWithColData(base, "proteins")
 sce <- sce[, colData(sce)$CellCycleStage == "UB"]
 sce <- logTransform(sce) # log transform to obtain normal intensities distribution
-
+sce <- sce[rowSums(!is.na(assay(sce))) > 1, ]
+sce
 ```
 
 ## Intensity distribution
@@ -86,8 +118,7 @@ ggplot(protMetrics_long, aes(x = value)) +
   labs(title = "Distribution of per-protein metrics",
        x = "Value", y = "Count")
 ```
-## Simulation
-
+## Simulation of patients
 ```{r}
 # Extract mean values
 mu <- protMetrics$meanIntensity
@@ -95,46 +126,157 @@ proteinNames <- protMetrics$protNames
 residualSD <- protMetrics$sdIntensity
 missingProb <- protMetrics$pctMissing/100
 nProt <- length(mu)
+```
 
+```{r}
 # Initialize matrix
 simMatrix <- matrix(NA, nrow = nProt, ncol = nCellTot)
 rownames(simMatrix) <- proteinNames
-cellIds <- paste0("P", rep(1:nPatient, each = nCellPatient), "_C", 1:nCellTot)
+cellIds <- paste0("P", rep(1:nPatient, each = nCellPatientSub), "_C", 1:nCellTot)
 colnames(simMatrix) <- cellIds
 
+subtypeEffects <- matrix(
+  rnorm(nProt * nCellSubtype, mean = 0, sd = subtypeSD),
+  nrow = nProt,
+  ncol = nCellSubtype,
+  dimnames = list(proteinNames, subtypeNames)
+)
+```
+
+```{r}
+# set parameters
+
+nPatientShiftProt <- floor(patientEffect * nProt)
+nSubtypeShiftProt <- floor(subtypeEffect * nProt)
+
+```
+
+```{r}
+
 # Prepare colData dataframe
+subtypesPerPatient <- rep(subtypeNames, each = nCellPatientSub)
+allSubtypes <- rep(subtypesPerPatient, times = nPatient)
+
+patients <- sub("_.*", "", colnames(simMatrix))
 
 colData <- data.frame(
   cellId = colnames(simMatrix),
-  patient = sub("_.*", "", colnames(simMatrix)),
+  patient = patients,
+  subtype = allSubtypes,
   patientShift = numeric(nCellTot),
+  subtypeShift = numeric(nCellTot),
   stringsAsFactors = FALSE
 )
+```
 
+```{r}
 cellCounter <- 1
+
 # Simulate
 for (i in 1:nPatient) {
-  # simulate patient effect
-  patientShift <- rnorm(nProt, mean = 0, sd = patientSD)
+  patientShift <- numeric(nProt)
+  names(patientShift) <- proteinNames
+  patientShiftProteins <- sample(proteinNames, nPatientShiftProt)
   
-  for (j in 1:nCellPatient) {
-    cellIndex <- (i - 1) * nCellPatient + j
-    colData$patientShift[cellCounter] <- patientShift
-    # simulate noise
-    noise <- rnorm(nProt, mean = 0, sd = residualSD)
+  # Assign patient shifts only to sampled proteins
+  patientShift[patientShiftProteins] <- rnorm(nPatientShiftProt, mean = 0, sd = patientSD)
+  
+  for (s in 1:nCellSubtype) {
+    subtypeShiftProteins <- sample(proteinNames, nSubtypeShiftProt)
+    subtypeName <- subtypeNames[s]
     
-    # final simulated intensity
-    simMatrix[, cellIndex] <- mu + patientShift + noise
+    # Extract subtype effect for all proteins
+    subtypeShiftFull <- subtypeEffects[, subtypeName]
     
-    cellCounter <- cellCounter + 1
+    # Zero out subtype shifts for proteins NOT in the sampled subset
+    subtypeShift <- numeric(nProt)
+    names(subtypeShift) <- proteinNames
+    subtypeShift[subtypeShiftProteins] <- subtypeShiftFull[subtypeShiftProteins]
+    for (k in 1:nCellPatientSub) {
+      cellIndex <- cellCounter
+      colData$patientShift[cellIndex] <- list(patientShift)
+      colData$subtypeShift[cellIndex] <- list(subtypeShift)
+      # Final simulated intensity
+      simMatrix[, cellIndex] <- rnorm(nProt, mean = mu, sd = residualSD) + patientShift + subtypeShift
+      
+      # Update colData
+      colData$subtype[cellIndex] <- subtypeName
+      
+      cellCounter <- cellCounter + 1
+    }
   }
 }
 
+
+```
+
+```{r}
 # Add missing values
 
 for (p in seq_len(nProt)) {
   missing <- runif(nCellTot) < missingProb[p]
   simMatrix[p, missing] <- NA
 }
+```
+
+Should the sampling of shifted proteins be the same for all patients/celltypes?
+## Create the SingleCellExperiment object
+
+```{r}
+simSCE <- SingleCellExperiment(assays = SimpleList(simMatrix),
+                     rowData = rowData(sce),
+                     colData = colData)
+simSCE
+
+```
+
+```{r}
+int_mat <- assay(simSCE)
+
+int_vec <- as.vector(int_mat)
+
+int_vec <- int_vec[!is.na(int_vec)]
+
+ggplot(data.frame(intensity = int_vec), aes(x = intensity)) +
+  geom_histogram(bins = 100, fill = "steelblue", color = "white") +
+  theme_minimal() +
+  labs(title = "Distribution of protein intensities across all cells",
+       x = "Intensity", y = "Frequency")
+```
+```{r}
+# Half of patients treated
+treated_patients <- sample(unique(colData(simSCE)$patient), size = nPatient / 2)
+
+# Add treatment column to colData
+colData(simSCE)$treatment <- ifelse(colData(simSCE)$patient %in% treated_patients, "treated", "control")
+
+# Select affected proteins
+nProt <- nrow(simSCE)
+proteinNames <- rownames(simSCE)
+nAffected <- floor(treatmentEffect * nProt)
+affected_proteins <- sample(proteinNames, size = nAffected, replace = FALSE)
+
+# Simulate shift per affected protein
+treatment_shift_vec <- numeric(nProt)
+names(treatment_shift_vec) <- proteinNames
+treatment_shift_vec[affected_proteins] <- rnorm(nAffected, mean = 0, sd = treatmentStrength)
+
+# Modify assay
+exprMat <- assay(simSCE)
+treated_cells <- colData(simSCE)$treatment == "treated"
+
+# Apply shift: add the same shift for each affected protein across treated cells
+exprMat[affected_proteins, treated_cells] <- exprMat[affected_proteins, treated_cells] +
+  treatment_shift_vec[affected_proteins]
+
+# Save modified matrix back
+assay(simSCE) <- exprMat
+
+rowData(simSCE)$treatmentAffected <- rownames(simSCE) %in% affected_proteins
+rowData(simSCE)$treatmentShift <- treatment_shift_vec
+```
+
+```{r}
+simSCE
 ```
 
