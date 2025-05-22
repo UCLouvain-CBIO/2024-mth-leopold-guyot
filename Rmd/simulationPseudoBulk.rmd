@@ -7,7 +7,11 @@ output:
   html_document: 
     mathjax: default
 ---
+# Idea
 
+- Subtype effect determined at the patient level?
+- Currently a mix of the two, not ideal
+- Remove subtype effect
 ## Packages
 ```{r packages, message = FALSE}
 library(scpdata)
