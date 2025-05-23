@@ -181,13 +181,6 @@ simMatrix <- matrix(NA, nrow = nProt, ncol = nCellTot)
 rownames(simMatrix) <- proteinNames
 cellIds <- paste0("P", rep(1:nPatient, each = nCellPatientSub), "_C", 1:nCellTot)
 colnames(simMatrix) <- cellIds
-
-subtypeEffects <- matrix(
-  rnorm(nProt * nCellSubtype, mean = 0, sd = subtypeSD),
-  nrow = nProt,
-  ncol = nCellSubtype,
-  dimnames = list(proteinNames, subtypeNames)
-)
 ```
 
 ```{r shiftProtDef}
@@ -224,22 +217,19 @@ for (i in 1:nPatient) {
   patientShift[patientShiftProteins] <- rnorm(nPatientShiftProt, mean = 0, sd = patientSD)
   
   for (s in 1:nCellSubtype) {
-    subtypeShiftProteins <- sample(proteinNames, nSubtypeShiftProt)
-    subtypeName <- subtypeNames[s]
-    # Extract subtype effect for all proteins
-    subtypeShiftFull <- subtypeEffects[, subtypeName]
-    
-    # Zero out subtype shifts for proteins NOT in the sampled subset
     subtypeShift <- numeric(nProt)
     names(subtypeShift) <- proteinNames
-    subtypeShift[subtypeShiftProteins] <- subtypeShiftFull[subtypeShiftProteins]
+    # Choose which proteins will receive the shift
+    subtypeShiftProteins <- sample(proteinNames, nSubtypeShiftProt)
+    subtypeShift[subtypeShiftProteins] <- rnorm(nSubtypeShiftProt, mean = 0,
+                                                sd = subtypeSD)
     for (k in 1:nCellPatientSub) {
       cellIndex <- cellCounter
       colData$patientShift[cellIndex] <- list(patientShift)
       colData$subtypeShift[cellIndex] <- list(subtypeShift)
       simMatrix[, cellIndex] <- rnorm(nProt, mean = mu, sd = residualSD) + patientShift + subtypeShift
       
-      colData$subtype[cellIndex] <- subtypeName
+      colData$subtype[cellIndex] <- subtypeNames[[s]]
       
       cellCounter <- cellCounter + 1
     }
@@ -361,7 +351,7 @@ L <- makeContrast("treatmenttreated=0", parameterNames = c("treatmenttreated"))
 ```
 
 ```{r msqrob2}
-msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ 1 + patient + subtype + treatment))
+msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ (1 | patient) + subtype + treatment))
 msqRes <- rowData(hypothesisTest(object = msqSIM, contrast = L))$treatmenttreated
 ```
 

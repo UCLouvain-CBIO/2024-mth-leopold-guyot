@@ -1,10 +1,11 @@
 library(rmarkdown)
 
-renderRmarkdown <- function(rmdFile, extension = ".html") {
+renderRmarkdown <- function(rmdFile) {
     rmarkdown::render(file.path("Rmd", rmdFile),
-        output_file = sub(".rmd", extension, rmdFile),
-        output_dir = "reports",
-        knit_root_dir = getwd()
+                      output_format = "html_document",
+                      output_file = sub(".rmd", ".html", rmdFile),
+                      output_dir = "reports",
+                      knit_root_dir = getwd()
     )
 }
 
