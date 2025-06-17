@@ -34,8 +34,7 @@ Let \( X_{ij} \) denote the log-intensity of protein \( i \) in cell \( j \).
 We model the log-intensity as:
 
 $$
-X_{ij} = \mu_i + \epsilon_{ij} + A^{\text{patient}}_i \cdot \delta^{\text{patient}}_{i, p_j} 
-+ A^{\text{subtype}}_i \cdot \delta^{\text{subtype}}_{i, s_j}
+X_{ij} = \mu_i + \epsilon_{ij} + A^{\text{patient}}_i \cdot \delta^{\text{patient}}_{i, p_j}
 + A^{\text{treatment}}_i \cdot \delta^{\text{treatment}}_i \cdot \mathbb{I}_{t_j = 1}
 $$
 
@@ -44,13 +43,10 @@ Where:
 - \( \mu_i \): baseline log-intensity of protein \( i \) obtained from experimental data
 - \( \epsilon_{ij} \sim \mathcal{N}(0, \sigma_i^2) \): residual noise obtained from experimental data
 - \( A^{\text{patient}}_i \): indicator if protein \( i \) is affected by patient-specific shifts  
-- \( A^{\text{subtype}}_i \): indicator if protein \( i \) is affected by subtype-specific shifts  
 - \( A^{\text{treatment}}_i \): indicator if protein \( i \) is affected by treatment  
 - \( p_j \in \{1, \ldots, P\} \): patient identity of cell \( j \)  
-- \( s_j \in \{1, \ldots, S\} \): subtype identity of cell \( j \)  
 - \( t_j \in \{0,1\} \): treatment status of cell \( j \) (1 = treated)  
 - \( \delta^{\text{patient}}_{i, p} \sim \mathcal{N}(0, \sigma_{\text{patient}}^2) \): patient-specific shift for protein \( i \) and patient \( p \)  
-- \( \delta^{\text{subtype}}_{i, s} \sim \mathcal{N}(0, \sigma_{\text{subtype}}^2) \): subtype-specific shift for protein \( i \) and subtype \( s \)  
 - \( \delta^{\text{treatment}}_i \sim \mathcal{N}(0, \sigma_{\text{treatment}}^2) \): treatment effect for protein \( i \)  
 - \( \mathbb{I}_{t_j = 1} \): indicator function equals 1 if cell \( j \) is treated, 0 otherwise
 
@@ -73,29 +69,18 @@ Where \( \pi_i \) is the experimentally observed missing rate of protein \( i \)
 # number of patients
 nPatient = 16
 
-# Number of cell population
-nCellSubtype <- 5
-
 # Cells by patient/subtype
 nCellPatientSub = 50
 
-subtypeNames <- paste0("Type", seq_len(nCellSubtype))
 
-nCellTot = nPatient * nCellSubtype * nCellPatientSub
+nCellTot = nPatient * nCellPatientSub
 
 # Inter-patient variability
-patientSD <- 0.5
+patientSD <- 1
 
 # Prop of proteins shifted by patient effect
 
-patientEffect <- 0.7
-
-# Inter-population variability
-subtypeSD <- 1
-
-# Prop of proteins shifted by subtype effect
-
-subtypeEffect <- 0.4
+patientEffect <- 0.3
 
 # proportion of proteins affected by treatment
 treatmentEffect <- 0.3
@@ -185,22 +170,17 @@ colnames(simMatrix) <- cellIds
 
 ```{r shiftProtDef}
 nPatientShiftProt <- floor(patientEffect * nProt)
-nSubtypeShiftProt <- floor(subtypeEffect * nProt)
 ```
 
 ```{r prepColData}
 # Prepare colData dataframe
-subtypesPerPatient <- rep(subtypeNames, each = nCellPatientSub)
-allSubtypes <- rep(subtypesPerPatient, times = nPatient)
 
 patients <- sub("_.*", "", colnames(simMatrix))
 
 colData <- data.frame(
   cellId = colnames(simMatrix),
   patient = patients,
-  subtype = allSubtypes,
   patientShift = numeric(nCellTot),
-  subtypeShift = numeric(nCellTot),
   stringsAsFactors = FALSE
 )
 ```
@@ -216,25 +196,14 @@ for (i in 1:nPatient) {
   patientShiftProteins <- sample(proteinNames, nPatientShiftProt)
   patientShift[patientShiftProteins] <- rnorm(nPatientShiftProt, mean = 0, sd = patientSD)
   
-  for (s in 1:nCellSubtype) {
-    subtypeShift <- numeric(nProt)
-    names(subtypeShift) <- proteinNames
-    # Choose which proteins will receive the shift
-    subtypeShiftProteins <- sample(proteinNames, nSubtypeShiftProt)
-    subtypeShift[subtypeShiftProteins] <- rnorm(nSubtypeShiftProt, mean = 0,
-                                                sd = subtypeSD)
-    for (k in 1:nCellPatientSub) {
+  for (k in 1:nCellPatientSub) {
       cellIndex <- cellCounter
       colData$patientShift[cellIndex] <- list(patientShift)
-      colData$subtypeShift[cellIndex] <- list(subtypeShift)
-      simMatrix[, cellIndex] <- rnorm(nProt, mean = mu, sd = residualSD) + patientShift + subtypeShift
-      
-      colData$subtype[cellIndex] <- subtypeNames[[s]]
+      simMatrix[, cellIndex] <- rnorm(nProt, mean = mu, sd = residualSD) + patientShift 
       
       cellCounter <- cellCounter + 1
     }
   }
-}
 ```
 
 ## Simulate data missingness
@@ -271,9 +240,8 @@ cd <- colData(simSCE)
 
 # Loop over each patient-subtype group
 for (p in unique(cd$patient)) {
-  for (s in unique(cd$subtype)) {
     # Find cell indices in this group
-    group_cells <- which(cd$patient == p & cd$subtype == s)
+    group_cells <- which(cd$patient == p)
     
     # Shuffle and assign 50% treated, 50% control
     n_group <- length(group_cells)
@@ -285,7 +253,6 @@ for (p in unique(cd$patient)) {
     treatment_vector[treated_cells] <- "treated"
     treatment_vector[control_cells] <- "control"
   }
-}
 
 # Assign to colData
 colData(simSCE)$treatment <- treatment_vector
@@ -339,7 +306,7 @@ ggplot(data.frame(intensity = int_vec), aes(x = intensity)) +
 ## Apply scplainer
 
 ```{r scplainer}
-scpSIM <- scpModelWorkflow(simSCE, formula = ~ 1 + patient + subtype + treatment, verbose = FALSE)
+scpSIM <- scpModelWorkflow(simSCE, formula = ~ 1 + patient + treatment, verbose = FALSE)
 scpRes <- scpDifferentialAnalysis(
     scpSIM,
     contrasts = list(c("treatment", "control", "treated"))
@@ -351,7 +318,7 @@ L <- makeContrast("treatmenttreated=0", parameterNames = c("treatmenttreated"))
 ```
 
 ```{r msqrob2}
-msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ (1 | patient) + subtype + treatment))
+msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ (1 | patient) + treatment))
 msqRes <- rowData(hypothesisTest(object = msqSIM, contrast = L))$treatmenttreated
 ```
 
@@ -389,8 +356,8 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
 }
 
 
-pbSIM <- aggregate_se(simSCE, c("patient", "subtype", "treatment"), fun = mean)
-pbSIM <- suppressWarnings(msqrob(pbSIM, ~ 1 + patient + subtype + treatment))
+pbSIM <- aggregate_se(simSCE, c("patient", "treatment"), fun = mean)
+pbSIM <- suppressWarnings(msqrob(pbSIM, ~ 1 + patient + treatment))
 pbRes <- rowData(hypothesisTest(object = pbSIM, contrast = L))$treatmenttreated
 ```
 
