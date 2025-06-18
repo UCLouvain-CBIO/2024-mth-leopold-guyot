@@ -71,6 +71,51 @@ simulate_peptide_data <- function(mod,
     return(simse)
 }
 
-simulate_peptide_data(mod, n_cells_per_comb = 500,
+
+add_patient_group_shift_SE <- function(se,
+                                       group_a,
+                                       group_b,
+                                       shift = 1,
+                                       sd = 0.5,
+                                       ratio = 0.1,
+                                       seed = 123) {
+    set.seed(seed)
+
+    peptides <- rownames(se)
+    n_peptides <- length(peptides)
+
+    n_shift <- ceiling(n_peptides * ratio)
+    shifted_peptides <- sample(peptides, n_shift)
+
+    shift_values <- rnorm(n_shift, mean = shift, sd = sd)
+    names(shift_values) <- shifted_peptides
+
+    patient_ids <- colData(se)$patient_id
+    group_b_cells <- colnames(se)[patient_ids %in% group_b]
+
+    assay_mat <- assay(se)
+    for (pep in shifted_peptides) {
+        assay_mat[pep, group_b_cells] <- assay_mat[pep, group_b_cells] + shift_values[pep]
+    }
+
+    assay(se) <- assay_mat
+
+    rowData(se)$shifted <- rownames(se) %in% shifted_peptides
+    rowData(se)$shift_value <- NA
+    rowData(se)$shift_value[match(shifted_peptides, rownames(se))] <- shift_values
+
+    return(se)
+}
+
+
+simData <- simulate_peptide_data(mod, n_cells_per_comb = 500,
                       cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
-                      patient_ids = c("P1", "3430861_d0", "3431438_d0", "3431452_d0")  )
+                      patient_ids = c("P1", "3430861_d0", "3431438_d0", "3431452_d0"))
+
+daSimData <- add_patient_group_shift_SE(simData,
+                                        group_a = c("P1", "3430861_d0"),
+                                        group_b = c("3431438_d0", "3431452_d0"),
+                                        shift = 1,
+                                        sd = 0.5,
+                                        ratio = 0.1,
+                                        seed = 123)
