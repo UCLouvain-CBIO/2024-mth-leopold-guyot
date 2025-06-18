@@ -1,6 +1,7 @@
 library(tidyverse)
 library(QFeatures)
 library(parallel)
+library(lme4)
 
 pep <- read.csv("/mnt/disk3/slavov_data/scope_pep-001.csv")
 prot <- read.csv("/mnt/disk3/slavov_data/scope_prot_max.csv")
@@ -25,6 +26,7 @@ widepep <- pivot_wider(subpep, names_from = "sc_id", values_from = "pep_quant")
 pepse <- readSummarizedExperiment(widepep, quantCols = 2:ncol(widepep), fnames = "modseq")
 coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(pepse), ]
 colData(pepse) <- as(coldataJoined, "DataFrame")
+pepse <- logTransform(pepse)
 
 # proteins
 
@@ -35,19 +37,21 @@ wideprot <- pivot_wider(subprot, names_from = "sc_id", values_from = "prot_quant
 protse <- readSummarizedExperiment(wideprot, quantCols = 2:ncol(wideprot), fnames = "protein")
 coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(protse), ]
 colData(protse) <- as(coldataJoined, "DataFrame")
+protse <- logTransform(protse)
 
 # model peptides
 
 longpep <- longForm(pepse, colvars = c("sc_id", "cell_type_lowerres", "patient_id", "raw.file", "day"))
 longpepD0 <- longpep[longpep$day == "d0", ]
-rm(list = ls()[ls() != "longpepD0"])
+longpepD0 <- longpepD0[longpepD0$cell_type_lowerres %in% c("CD4T", "CD8T", "monocyte", "NK"),]
 
 splitpep <- split(longpepD0, longpepD0$rowname)
 
 modelList <- mclapply(splitpep, FUN = function(pep) {
   tryCatch({
-    lm(value ~ 0 + patient_id + cell_type_lowerres, pep)$coefficient
-    },
+    mod <- lmer(formula = value ~ cell_type_lowerres + patient_id + (1 | raw.file), as.data.frame(pep))
+    list("coefficients" = summary(mod)$coefficients, "sigma" = summary(mod)$sigma)  
+  },
            error = function(e) NA)
   },
   mc.cores = 12L
