@@ -40,11 +40,17 @@ colData(protse) <- as(coldataJoined, "DataFrame")
 
 longpep <- longForm(pepse, colvars = c("sc_id", "cell_type_lowerres", "patient_id", "raw.file", "day"))
 longpepD0 <- longpep[longpep$day == "d0", ]
-sub <- longpepD0[1:10,]
+rm(list = ls()[ls() != "longpepD0"])
 
-modelList <- mclapply(unique(longpepD0$rowname), FUN = function(pep) {
-  tryCatch(lm(value ~ 0 + patient_id + cell_type_lowerres, longpepD0[pep,]),
+splitpep <- split(longpepD0, longpepD0$rowname)
+
+modelList <- mclapply(splitpep, FUN = function(pep) {
+  tryCatch({
+    lm(value ~ 0 + patient_id + cell_type_lowerres, pep)$coefficient
+    },
            error = function(e) NA)
   },
   mc.cores = 12L
-  )
+)
+
+saveRDS(modelList, "dataOutput/slavovModels/pepMod.RDS")
