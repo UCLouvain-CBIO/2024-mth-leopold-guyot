@@ -87,7 +87,7 @@ simulate_peptide_data <- function(mod,
         summarize("cell_type" = unique(cell_type), "patient_id" = unique(patient_id)) %>%
         as("DataFrame")
     rownames(simColData) <- simColData$cell_id
-
+    rownames(simQuant) <- simQuant$peptide
     simse <- readSummarizedExperiment(simQuant, quantCols = 2:ncol(simQuant))
     colData(simse) <- simColData
     return(simse)
@@ -129,20 +129,3 @@ add_patient_group_shift_SE <- function(se,
     colData(se)[group_b_cells, "condition"] <- "B"
     return(se)
 }
-
-
-simData <- simulate_peptide_data(
-    mod,
-    n_cells_per_comb = 150,
-    cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
-    n_synthetic_patients = 16
-)
-
-
-daSimData <- add_patient_group_shift_SE(simData,
-                                        group_a = unique(colData(simData)$patient_id)[1:8],
-                                        group_b = unique(colData(simData)$patient_id)[9:16],
-                                        shift = 1,
-                                        sd = 0.5,
-                                        ratio = 0.1,
-                                        seed = 123)
