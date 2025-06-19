@@ -59,7 +59,7 @@ simulate_peptide_data <- function(mod,
 
         # Estimate variance of patient effects
         patient_coefs <- grep("^patient_id", names(model_info$coefficients[, "Estimate"]), value = TRUE)
-        var_pat <- var(model_info$coefficients[patient_coefs, "Estimate"])
+        var_pat <- get_patient_effect_variance(model_info)
 
         # Simulate effects for new patients
         synthetic_effects <- rnorm(n_synthetic_patients, mean = 0, sd = sqrt(var_pat))
@@ -124,7 +124,7 @@ add_patient_group_shift_SE <- function(se,
     rowData(se)$shifted <- rownames(se) %in% shifted_peptides
     rowData(se)$shift_value <- NA
     rowData(se)$shift_value[match(shifted_peptides, rownames(se))] <- shift_values
-  
+
     colData(se)$condition <- "A"
     colData(se)[group_b_cells, "condition"] <- "B"
     return(se)
