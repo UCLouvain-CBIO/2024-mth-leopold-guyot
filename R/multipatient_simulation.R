@@ -124,22 +124,24 @@ add_patient_group_shift_SE <- function(se,
     rowData(se)$shifted <- rownames(se) %in% shifted_peptides
     rowData(se)$shift_value <- NA
     rowData(se)$shift_value[match(shifted_peptides, rownames(se))] <- shift_values
-
+  
+    colData(se)$condition <- "A"
+    colData(se)[group_b_cells, "condition"] <- "B"
     return(se)
 }
 
 
 simData <- simulate_peptide_data(
     mod,
-    n_cells_per_comb = 10,
+    n_cells_per_comb = 150,
     cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
-    n_synthetic_patients = 6
+    n_synthetic_patients = 16
 )
 
 
 daSimData <- add_patient_group_shift_SE(simData,
-                                        group_a = c("P1", "3430861_d0"),
-                                        group_b = c("3431438_d0", "3431452_d0"),
+                                        group_a = unique(colData(simData)$patient_id)[1:8],
+                                        group_b = unique(colData(simData)$patient_id)[9:16],
                                         shift = 1,
                                         sd = 0.5,
                                         ratio = 0.1,
