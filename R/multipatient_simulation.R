@@ -6,12 +6,16 @@ library(tidyverse)
 mod <- readRDS("dataOutput/slavovModels/pepMod.RDS")
 mod <- mod[!is.na(mod)]
 
-simulate_peptide <- function(model_info, metadata_df) {
+get_patient_effect_variance <- function(model) {
+    patient_coefs <- grep("^patient_id", names(model$coefficients[, "Estimate"]), value = TRUE)
+    var(c(0, model$coefficients[patient_coefs, "Estimate"])) # add 0 for the reference level
+}
+
+simulate_peptide <- function(model_info, metadata_df, synthetic_patient_effects = NULL) {
     coefs <- model_info$coefficients[, "Estimate"]
     sigma <- model_info$sigma
 
     intercept <- coefs["(Intercept)"]
-
     predicted <- rep(intercept, nrow(metadata_df))
 
     predicted <- predicted + sapply(metadata_df$cell_type, function(ct) {
@@ -21,29 +25,48 @@ simulate_peptide <- function(model_info, metadata_df) {
 
     predicted <- predicted + sapply(metadata_df$patient_id, function(pid) {
         coef_name <- paste0("patient_id", pid)
-        if (coef_name %in% names(coefs)) coefs[coef_name] else 0
+        if (coef_name %in% names(coefs)) {
+            coefs[coef_name]
+        } else if (!is.null(synthetic_patient_effects) && pid %in% names(synthetic_patient_effects)) {
+            synthetic_patient_effects[[pid]]
+        } else {
+            0
+        }
     })
 
-    # Add Gaussian noise
     intensity <- rnorm(nrow(metadata_df), mean = predicted, sd = sigma)
     return(intensity)
 }
 
+
 simulate_peptide_data <- function(mod,
                                   n_cells_per_comb = 10,
                                   cell_types,
-                                  patient_ids) {
+                                  n_synthetic_patients = 6) {
+
+    synthetic_patient_ids <- paste0("SynthP", seq_len(n_synthetic_patients))
+
     synthetic_meta <- expand.grid(
         cell_type = cell_types,
-        patient_id = patient_ids,
+        patient_id = synthetic_patient_ids,
         stringsAsFactors = FALSE
     )
-
     synthetic_meta <- synthetic_meta[rep(seq_len(nrow(synthetic_meta)), each = n_cells_per_comb), ]
     synthetic_meta$cell_id <- paste0("SynCell_", seq_len(nrow(synthetic_meta)))
 
     sim_results <- lapply(names(mod), function(peptide) {
-        intensities <- simulate_peptide(mod[[peptide]], synthetic_meta)
+        model_info <- mod[[peptide]]
+
+        # Estimate variance of patient effects
+        patient_coefs <- grep("^patient_id", names(model_info$coefficients[, "Estimate"]), value = TRUE)
+        var_pat <- var(model_info$coefficients[patient_coefs, "Estimate"])
+
+        # Simulate effects for new patients
+        synthetic_effects <- rnorm(n_synthetic_patients, mean = 0, sd = sqrt(var_pat))
+        names(synthetic_effects) <- synthetic_patient_ids
+
+        intensities <- simulate_peptide(model_info, synthetic_meta, synthetic_patient_effects = synthetic_effects)
+
         data.frame(
             cell_id = synthetic_meta$cell_id,
             peptide = peptide,
@@ -65,12 +88,10 @@ simulate_peptide_data <- function(mod,
         as("DataFrame")
     rownames(simColData) <- simColData$cell_id
 
-
     simse <- readSummarizedExperiment(simQuant, quantCols = 2:ncol(simQuant))
     colData(simse) <- simColData
     return(simse)
 }
-
 
 add_patient_group_shift_SE <- function(se,
                                        group_a,
@@ -108,9 +129,13 @@ add_patient_group_shift_SE <- function(se,
 }
 
 
-simData <- simulate_peptide_data(mod, n_cells_per_comb = 500,
-                      cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
-                      patient_ids = c("P1", "3430861_d0", "3431438_d0", "3431452_d0"))
+simData <- simulate_peptide_data(
+    mod,
+    n_cells_per_comb = 10,
+    cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
+    n_synthetic_patients = 6
+)
+
 
 daSimData <- add_patient_group_shift_SE(simData,
                                         group_a = c("P1", "3430861_d0"),
