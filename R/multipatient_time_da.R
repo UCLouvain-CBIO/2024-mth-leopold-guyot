@@ -2,6 +2,7 @@ library(tidyverse)
 library(QFeatures)
 library(parallel)
 library(lme4)
+library(pcaMethods)
 
 pep <- read.csv("/mnt/disk3/slavov_data/scope_pep-001.csv")
 prot <- read.csv("/mnt/disk3/slavov_data/scope_prot_max.csv")
@@ -29,12 +30,12 @@ colData(pepse) <- as(coldataJoined, "DataFrame")
 pepse <- logTransform(pepse)
 colData(pepse) <- colData(pepse) %>%
   as.data.frame() %>%
-  separate_wider_delim(cols = patient_id, delim = "_", names = c("patient_id", "dayp")) %>%
+  separate_wider_delim(cols = patient_id, delim = "_", names = c("patient", "dayp")) %>%
   as("DataFrame")
-
+colnames(pepse) <- colData(pepse)$sc_id
 
 # Processing
-
+pepse <- pepse[, colData(pepse)$day %in% c("d0", "d2")]
 pepse <- zeroIsNA(pepse)
 
 pepse <- filterNA(pepse, pNA = 0.98)
@@ -43,15 +44,19 @@ pepse <- sweep(pepse,
       MARGIN = 2,
       FUN = "/",
       STATS = colMedians(assay(pepse), na.rm = TRUE))
+pca <- pcaMethods::nipalsPca(t(assay(pepse)), maxSteps = 5000)
+df <- merge(scores(pca), colData(pepse), by = 0)
 
-pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + raw.file + lc_batch)
+ggplot(df, aes(x = V1, y = V2, color = patient)) + geom_point() + xlim(c(-500, 500)) + ylim(c(-500, 300))
+
+pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + lc_batch + cell_type_lowerres)
 
 dayRes <- scpDifferentialAnalysis(
   pepseMod,
-  contrasts = list(c("day", "d0", "d"))
+  contrasts = list(c("day", "d0", "d2"))
 )[[1]] %>%
-  filter(padj <= 0.05,
-         Estimate >= 1) %>%
-  rownames()
+  as.data.frame() %>% 
+  filter(padj <= 0.05)
 
+pepse <- pepse[-dayRes$feature,]
 
