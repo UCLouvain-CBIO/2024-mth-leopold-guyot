@@ -3,7 +3,9 @@ library(QFeatures)
 library(parallel)
 library(lme4)
 library(pcaMethods)
+library(scp)
 library(msqrob2)
+library(iCOBRA)
 source(file = "R/utils.R")
 
 pep <- read.csv("/mnt/disk3/slavov_data/scope_pep-001.csv")
@@ -60,14 +62,13 @@ dayRes <- scpDifferentialAnalysis(
   as.data.frame() %>%
   filter(padj <= 0.05)
 
-pepse <- pepse[-dayRes$feature,]
-
+pepse <- pepse[!rownames(pepse) %in% dayRes$feature,]
 
 # Implement known changes
 
 shift_ratio <- 0.1
-shift_coef <- 0.8
-shift_sd <- 0.4
+shift_coef <- 1.5
+shift_sd <- 0.5
 
 is_d2 <- colData(pepse)$day == "d2"
 
@@ -90,9 +91,11 @@ mat[, is_d2] <- sweep(
 )
 
 rowData(pepse)$shift_value <- peptide_shifts
+rowData(pepse)$shifted <- peptide_shifts != 0
 
 assay(pepse) <- mat
 
+saveRDS(pepse, "dataOutput/slavovModels/dayIntroducedSE.rds")
 pepsePB <- aggregate_se(pepse,
              group_by_cols = c("cell_type_lowerres", "patient", "day"),
              fun = mean)
@@ -107,20 +110,20 @@ colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
 rownames(scpRes) <- scpRes$feature
 
 L <- makeContrast("dayd2=0", parameterNames = c("dayd2"))
-msqModel <- suppressWarnings(msqrob(pepse, formula = ~ cell_type + condition + (1 | patient_id)))
-msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$conditionB
+msqModel <- suppressWarnings(msqrob(pepse, formula = ~ cell_type_lowerres + day + (1 | patient)))
+msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$dayd2
 
-pbModel <- suppressWarnings(msqrob(pepsePB, ~ 1 + condition + cell_type))
-pbRes <- rowData(hypothesisTest(object = pbModel, contrast = L))$conditionB
+pbModel <- suppressWarnings(msqrob(pepsePB, ~ 1 + cell_type_lowerres + day))
+pbRes <- rowData(hypothesisTest(object = pbModel, contrast = L))$dayd2
 
-fdrtpr <- compute_performance(list("scp" = scpRes, "msqrob2" = msqRes, "pseudobulk" = pbRes), rowdata = rowData(daSimData))
+fdrtpr <- compute_performance(list("scp" = scpRes, "msqrob2" = msqRes, "pseudobulk" = pbRes), rowdata = rowData(pepse))
 
 plot <- ggplot(fdrtpr, aes(x = FDR, y = TPR, color = method)) +
   geom_vline(
     xintercept = c(0.01, 0.05, 0.1),
     linetype = "dashed", color = "grey50", linewidth = 0.3
   ) +
-  geom_point(size = 0.5, alpha = 0.8) +
+  geom_point(size = 1, alpha = 0.8) +
   geom_line(size = 0.7) +
   scale_x_continuous(
     limits = c(0, 1),
