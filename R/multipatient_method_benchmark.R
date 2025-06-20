@@ -81,8 +81,8 @@ rownames(simData) <- rowData(simData)$peptide
 daSimData <- add_patient_group_shift_SE(simData,
                                         group_a = unique(colData(simData)$patient_id)[1:8],
                                         group_b = unique(colData(simData)$patient_id)[9:16],
-                                        shift = 2,
-                                        sd = 1,
+                                        shift = 0.8,
+                                        sd = 0.2,
                                         ratio = 0.1,
                                         seed = 123)
 
