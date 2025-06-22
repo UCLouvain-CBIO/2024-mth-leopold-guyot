@@ -48,12 +48,10 @@ pepse <- sweep(pepse,
       MARGIN = 2,
       FUN = "/",
       STATS = colMedians(assay(pepse), na.rm = TRUE))
-pca <- pcaMethods::nipalsPca(t(assay(pepse)), maxSteps = 5000)
-df <- merge(scores(pca), colData(pepse), by = 0)
-
-ggplot(df, aes(x = V1, y = V2, color = patient)) + geom_point() + xlim(c(-500, 500)) + ylim(c(-500, 300))
 
 pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + lc_batch + cell_type_lowerres)
+pca <- scpComponentAnalysis(pepseMod)
+saveRDS(pca, "dataOutput/slavovModels/pca.rds")
 
 dayRes <- scpDifferentialAnalysis(
   pepseMod,
@@ -64,13 +62,23 @@ dayRes <- scpDifferentialAnalysis(
 
 pepse <- pepse[!rownames(pepse) %in% dayRes$feature,]
 
+colData(pepse) <- colData(pepse) %>%
+  as.data.frame %>% 
+  mutate(pseudo_patient = paste(patient, day, sep = "_")) %>% 
+  as("DataFrame")
+
 # Implement known changes
 
 shift_ratio <- 0.1
 shift_coef <- 1.5
 shift_sd <- 0.5
 
-is_d2 <- colData(pepse)$day == "d2"
+
+is_da <- colData(pepse)$pseudo_patient %in% c("3430861_d0",
+                                   "3430655_d2",
+                                   "3431452_d0",
+                                   "3431438_d2")
+colData(pepse)$condition <- as.character(is_da)
 
 mat <- assay(pepse)
 
@@ -83,8 +91,8 @@ peptide_shifts[shift_flag] <- rnorm(
   sd = shift_sd
 )
 
-mat[, is_d2] <- sweep(
-  mat[, is_d2, drop = FALSE],
+mat[, is_da] <- sweep(
+  mat[, is_da, drop = FALSE],
   MARGIN = 1,
   STATS = peptide_shifts,
   FUN = "+"
@@ -95,26 +103,26 @@ rowData(pepse)$shifted <- peptide_shifts != 0
 
 assay(pepse) <- mat
 
-saveRDS(pepse, "dataOutput/slavovModels/dayIntroducedSE.rds")
+saveRDS(pepse, "dataOutput/slavovModels/conditionIntroducedSE.rds")
 pepsePB <- aggregate_se(pepse,
-             group_by_cols = c("cell_type_lowerres", "patient", "day"),
+             group_by_cols = c("cell_type_lowerres", "patient", "condition"),
              fun = mean)
 
-scpModel <- scpModelWorkflow(pepse, formula = ~ 1 + cell_type_lowerres + patient + day, verbose = TRUE)
+scpModel <- scpModelWorkflow(pepse, formula = ~ 1 + cell_type_lowerres + patient + condition, verbose = TRUE)
 scpRes <- scpDifferentialAnalysis(
   scpModel,
-  contrasts = list(c("day", "d0", "d2"))
+  contrasts = list(c("condition", "FALSE", "TRUE"))
 )[[1]]
 
 colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
 rownames(scpRes) <- scpRes$feature
 
-L <- makeContrast("dayd2=0", parameterNames = c("dayd2"))
-msqModel <- suppressWarnings(msqrob(pepse, formula = ~ cell_type_lowerres + day + (1 | patient)))
-msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$dayd2
+L <- makeContrast("conditionTRUE=0", parameterNames = c("conditionTRUE"))
+msqModel <- suppressWarnings(msqrob(pepse, formula = ~ cell_type_lowerres + condition + (1 | patient)))
+msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$conditionTRUE
 
-pbModel <- suppressWarnings(msqrob(pepsePB, ~ 1 + cell_type_lowerres + day))
-pbRes <- rowData(hypothesisTest(object = pbModel, contrast = L))$dayd2
+pbModel <- suppressWarnings(msqrob(pepsePB, ~ 1 + cell_type_lowerres + condition))
+pbRes <- rowData(hypothesisTest(object = pbModel, contrast = L))$conditionTRUE
 
 fdrtpr <- compute_performance(list("scp" = scpRes, "msqrob2" = msqRes, "pseudobulk" = pbRes), rowdata = rowData(pepse))
 
