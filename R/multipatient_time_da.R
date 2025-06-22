@@ -50,8 +50,8 @@ pepse <- sweep(pepse,
       STATS = colMedians(assay(pepse), na.rm = TRUE))
 
 pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + lc_batch + cell_type_lowerres)
-pca <- scpComponentAnalysis(pepseMod)
-saveRDS(pca, "dataOutput/slavovModels/pca.rds")
+pca <- scpComponentAnalysis(pepseMod, effects = c("patient", "day", "lc_batch", "cell_type_lowerres"))
+saveRDS(list(pca, colData(pepseMod)), "dataOutput/slavovModels/pca.rds")
 
 dayRes <- scpDifferentialAnalysis(
   pepseMod,
@@ -63,8 +63,8 @@ dayRes <- scpDifferentialAnalysis(
 pepse <- pepse[!rownames(pepse) %in% dayRes$feature,]
 
 colData(pepse) <- colData(pepse) %>%
-  as.data.frame %>% 
-  mutate(pseudo_patient = paste(patient, day, sep = "_")) %>% 
+  as.data.frame %>%
+  mutate(pseudo_patient = paste(patient, day, sep = "_")) %>%
   as("DataFrame")
 
 # Implement known changes
