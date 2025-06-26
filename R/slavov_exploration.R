@@ -4,6 +4,7 @@ library(parallel)
 library(lme4)
 library(scp)
 library(pcaMethods)
+library(patchwork)
 
 pep <- read.csv("/mnt/disk3/slavov_data/scope_pep-001.csv")
 prot <- read.csv("/mnt/disk3/slavov_data/scope_prot_max.csv")
@@ -33,6 +34,14 @@ pepse <- logTransform(pepse)
 pca <- pca(t(assay(pepse)), "nipals")
 
 df <- merge(scores(pca), colData(pepse), by = 0)
+combinedPlot <- list()
+for (var in c("label", "plate", "patient_id", "lc_batch", "day", "cell_type_lowerres", "raw.file")) {
+  combinedPlot[[var]] <- ggplot(df, aes(PC1, PC2, shape=cell_type_lowerres, color=var)) +
+    geom_point() +
+    xlab(paste("PC1", pca@R2[1] * 100, "% of the variance")) +
+    ylab(paste("PC2", pca@R2[2] * 100, "% of the variance")) + 
+    theme(legend.position = "none") + ggtitle(var)
+}
 ggplot(df, aes(PC1, PC2, shape=cell_type_lowerres, color=lc_batch)) +
   geom_point() +
   xlab(paste("PC1", pca@R2[1] * 100, "% of the variance")) +
