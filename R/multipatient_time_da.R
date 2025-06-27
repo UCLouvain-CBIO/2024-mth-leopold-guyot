@@ -42,16 +42,9 @@ colnames(pepse) <- colData(pepse)$sc_id
 pepse <- pepse[, colData(pepse)$day %in% c("d0", "d2")]
 pepse <- zeroIsNA(pepse)
 
-pepse <- filterNA(pepse, pNA = 0.98)
-
-pepse <- sweep(pepse,
-      MARGIN = 2,
-      FUN = "/",
-      STATS = colMedians(assay(pepse), na.rm = TRUE))
+pepse <- filterNA(pepse, pNA = 0.97)
 
 pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + lc_batch + cell_type_lowerres)
-pca <- scpComponentAnalysis(pepseMod, effects = c("patient", "day", "lc_batch", "cell_type_lowerres"))
-saveRDS(list(pca, colData(pepseMod)), "dataOutput/slavovModels/pca.rds")
 
 dayRes <- scpDifferentialAnalysis(
   pepseMod,
@@ -125,7 +118,7 @@ pbModel <- suppressWarnings(msqrob(pepsePB, ~ 1 + cell_type_lowerres + condition
 pbRes <- rowData(hypothesisTest(object = pbModel, contrast = L))$conditionTRUE
 
 fdrtpr <- compute_performance(list("scp" = scpRes, "msqrob2" = msqRes, "pseudobulk" = pbRes), rowdata = rowData(pepse))
-
+write.csv(fdrtpr, "dataOutput/slavovModels/fdrtpr.csv")
 plot <- ggplot(fdrtpr, aes(x = FDR, y = TPR, color = method)) +
   geom_vline(
     xintercept = c(0.01, 0.05, 0.1),

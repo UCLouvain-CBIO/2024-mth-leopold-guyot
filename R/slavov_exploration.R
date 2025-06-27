@@ -62,4 +62,20 @@ wrap_plots(combinedPlot)
 scpMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + cell_type_lowerres)
 pca <- scpComponentAnalysis(scpMod, method = "ASCA", effects = c("patient", "day", "cell_type_lowerres"),
                             pcaFUN = "auto", residuals = FALSE, unmodelled = FALSE)
+
+coldata <- colData(scpMod)
+colnames(coldata)[[1]] <- "cell"
+bySamplePCs <- scpAnnotateResults(
+  pca$bySample, coldata, by = "cell"
+)
+
+scpComponentPlot(
+  bySamplePCs, 
+  pointParams = list( ## ggplot arguments
+    aes(colour = cell_type_lowerres , shape = patient), 
+    alpha = 0.6
+  )
+) |>
+  wrap_plots(guides = "collect")
+
 saveRDS(df, "dataOutput/slavovModels/pca.rds")  
