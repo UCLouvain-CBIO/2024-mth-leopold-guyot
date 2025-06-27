@@ -30,12 +30,26 @@ pepse <- readSummarizedExperiment(widepep, quantCols = 2:ncol(widepep), fnames =
 coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(pepse), ]
 colData(pepse) <- as(coldataJoined, "DataFrame")
 pepse <- logTransform(pepse)
+colData(pepse) <- colData(pepse) %>%
+  as.data.frame() %>%
+  separate_wider_delim(cols = patient_id, delim = "_", names = c("patient", "dayp")) %>%
+  as("DataFrame")
+colnames(pepse) <- colData(pepse)$sc_id
+pepse <- pepse[, colData(pepse)$day %in% c("d0", "d2")]
+pepse <- zeroIsNA(pepse)
+
+pepse <- filterNA(pepse, pNA = 0.99)
+# pepse <- sweep(pepse,
+#                MARGIN = 2,
+#                FUN = "/",
+#                STATS = colMedians(assay(pepse), na.rm = TRUE))
+
 
 pca <- pca(t(assay(pepse)), "nipals", )
 
 df <- merge(scores(pca), colData(pepse), by = 0)
 combinedPlot <- list()
-for (var in c("label", "plate", "patient_id", "lc_batch", "day", "cell_type_lowerres", "raw.file")) {
+for (var in c("label", "plate", "patient", "lc_batch", "day", "cell_type_lowerres", "raw.file")) {
   combinedPlot[[var]] <- ggplot(df, aes(PC1, PC2, color=.data[[var]])) +
     geom_point() +
     xlab(paste("PC1", pca@R2[1] * 100, "% of the variance")) +
@@ -43,8 +57,9 @@ for (var in c("label", "plate", "patient_id", "lc_batch", "day", "cell_type_lowe
     theme(legend.position = "none") + ggtitle(var)
 }
 
-ggsave(wrap_plots(combinedPlot), "Figs/nipalsMultiPatient.pdf", width = 15, height = 10)
+wrap_plots(combinedPlot)
 
-scpMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient_id + cell_type_lowerres)
-
+scpMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + cell_type_lowerres)
+pca <- scpComponentAnalysis(scpMod, method = "ASCA", effects = c("patient", "day", "cell_type_lowerres"),
+                            pcaFUN = "auto", residuals = FALSE, unmodelled = FALSE)
 saveRDS(df, "dataOutput/slavovModels/pca.rds")  
