@@ -31,21 +31,20 @@ coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(pepse), ]
 colData(pepse) <- as(coldataJoined, "DataFrame")
 pepse <- logTransform(pepse)
 
-pca <- pca(t(assay(pepse)), "nipals")
+pca <- pca(t(assay(pepse)), "nipals", )
 
 df <- merge(scores(pca), colData(pepse), by = 0)
 combinedPlot <- list()
 for (var in c("label", "plate", "patient_id", "lc_batch", "day", "cell_type_lowerres", "raw.file")) {
-  combinedPlot[[var]] <- ggplot(df, aes(PC1, PC2, shape=cell_type_lowerres, color=var)) +
+  combinedPlot[[var]] <- ggplot(df, aes(PC1, PC2, color=.data[[var]])) +
     geom_point() +
     xlab(paste("PC1", pca@R2[1] * 100, "% of the variance")) +
     ylab(paste("PC2", pca@R2[2] * 100, "% of the variance")) + 
     theme(legend.position = "none") + ggtitle(var)
 }
-ggplot(df, aes(PC1, PC2, shape=cell_type_lowerres, color=lc_batch)) +
-  geom_point() +
-  xlab(paste("PC1", pca@R2[1] * 100, "% of the variance")) +
-  ylab(paste("PC2", pca@R2[2] * 100, "% of the variance")) + 
-  theme(legend.position = "none")
+
+ggsave(wrap_plots(combinedPlot), "Figs/nipalsMultiPatient.pdf", width = 15, height = 10)
+
+scpMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient_id + cell_type_lowerres)
 
 saveRDS(df, "dataOutput/slavovModels/pca.rds")  
