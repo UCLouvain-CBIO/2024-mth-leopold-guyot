@@ -42,7 +42,11 @@ colnames(pepse) <- colData(pepse)$sc_id
 pepse <- pepse[, colData(pepse)$day %in% c("d0", "d2")]
 pepse <- zeroIsNA(pepse)
 
-pepse <- filterNA(pepse, pNA = 0.97)
+pepse <- filterNA(pepse, pNA = 0.99)
+pepse <- sweep(pepse,
+               MARGIN = 2,
+               FUN = "/",
+               STATS = colMedians(assay(pepse), na.rm = TRUE))
 
 pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + lc_batch + cell_type_lowerres)
 
