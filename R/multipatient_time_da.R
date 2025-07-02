@@ -42,13 +42,13 @@ colnames(pepse) <- colData(pepse)$sc_id
 pepse <- pepse[, colData(pepse)$day %in% c("d0", "d2")]
 pepse <- zeroIsNA(pepse)
 
-pepse <- filterNA(pepse, pNA = 0.99)
+pepse <- filterNA(pepse, pNA = 0.98)
 pepse <- sweep(pepse,
                MARGIN = 2,
                FUN = "/",
                STATS = colMedians(assay(pepse), na.rm = TRUE))
 
-pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + lc_batch + cell_type_lowerres)
+pepseMod <- scpModelWorkflow(pepse, formula = ~ 1 + patient + day + cell_type_lowerres)
 
 dayRes <- scpDifferentialAnalysis(
   pepseMod,
@@ -67,8 +67,8 @@ colData(pepse) <- colData(pepse) %>%
 # Implement known changes
 
 shift_ratio <- 0.1
-shift_coef <- 1.5
-shift_sd <- 0.5
+shift_coef <- 0.5
+shift_sd <- 0.1
 
 
 is_da <- colData(pepse)$pseudo_patient %in% c("3430861_d0",
