@@ -67,8 +67,8 @@ colData(pepse) <- colData(pepse) %>%
 # Implement known changes
 
 shift_ratio <- 0.1
-shift_coef <- 0.5
-shift_sd <- 0.1
+shift_coef <- 0.8
+shift_sd <- 0.2
 
 
 is_da <- colData(pepse)$pseudo_patient %in% c("3430861_d0",
