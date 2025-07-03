@@ -3,6 +3,7 @@
 library(ggplot2)
 library(tidyverse)
 library(patchwork)
+library(ggpmisc)
 
 ############### Vignette Benchmark ############
 
@@ -442,3 +443,137 @@ peakRamTableOrdered <- peakRamTable %>%
 ggplotly(ggplot(peakRamTableOrdered, aes(x = nCell, y = medianTimeSec)) +
              geom_line())
 ggsave("Figs/singleStepSample.png")
+
+filterSample <- peakRamTable %>%
+    filter(step == "benchmarkFilterSamples") %>%
+    mutate(
+        nCellFactor = factor(nCell, levels = nCell_order),
+        nCellNum = as.numeric(nCell)
+    )
+
+aggPSM <- peakRamTable %>%
+    filter(step == "benchmarkAggPSM") %>%
+    mutate(
+        nCellFactor = factor(nCell, levels = nCell_order),
+        nCellNum = as.numeric(nCell)
+    )
+
+joinPSM <- peakRamTable %>%
+    filter(step == "benchmarkJoinPSM") %>%
+    mutate(
+        nCellFactor = factor(nCell, levels = nCell_order),
+        nCellNum = as.numeric(nCell)
+    )
+
+subsetCombined <- peakRamTable %>%
+    filter(step %in% c("benchmarkJoinPSM", "benchmarkAggPSM", "benchmarkFilterSamples")) %>%
+    group_by(step, nCell) %>%
+    mutate(
+        nCellFactor = factor(nCell, levels = nCell_order),
+        nCellNum = as.numeric(nCell)
+    )
+
+# Split data
+quad_data <- subsetCombined %>% filter(step == "benchmarkFilterSamples")
+lin_data  <- subsetCombined %>% filter(step != "benchmarkFilterSamples")
+
+p_time_mixed <- ggplot(subsetCombined, aes(x = nCellNum, y = Elapsed_Time_sec)) +
+    geom_boxplot(
+        aes(group = interaction(step, nCellNum), color = step),
+        alpha = 0.4,
+        position = position_dodge(width = 0.75)
+    ) +
+
+    # Quadratic smooth + annotation
+    geom_smooth(
+        data = quad_data,
+        aes(color = step),
+        method = "lm",
+        formula = y ~ poly(x, 2),
+        se = TRUE
+    ) +
+    stat_poly_eq(
+        data = quad_data,
+        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+        formula = y ~ poly(x, 2),
+        parse = TRUE,
+        label.x.npc = "left",
+        label.y.npc = "top",
+        size = 3
+    ) +
+
+    # Linear smooth + annotation
+    geom_smooth(
+        data = lin_data,
+        aes(color = step),
+        method = "lm",
+        formula = y ~ x,
+        se = TRUE
+    ) +
+    stat_poly_eq(
+        data = lin_data,
+        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+        formula = y ~ x,
+        parse = TRUE,
+        label.x.npc = "left",
+        label.y.npc = "top",
+        size = 3
+    ) +
+
+    facet_wrap(~ step, scales = "fixed") +
+    ylim(0, NA) +
+    xlab("Number of Cells") +
+    ylab("Elapsed Time (seconds)") +
+    theme_minimal() +
+    scale_x_continuous(breaks = as.numeric(nCell_order)) +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    )
+
+ggsave("Figs/report/substepTime.pdf", p_time_mixed, width = 8, height = 4)
+
+
+p_peak <- ggplot(subsetCombined, aes(x = nCellNum, y = Peak_RAM_Used_MiB)) +
+    geom_boxplot(
+        aes(group = interaction(step, nCellNum), color = step),
+        alpha = 0.4,
+        position = position_dodge(width = 0.75)
+    ) +
+    # Linear smooth + annotation
+    geom_smooth(
+        aes(color = step),
+        method = "lm",
+        formula = y ~ x,
+        se = TRUE
+    ) +
+    stat_poly_eq(
+        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+        formula = y ~ x,
+        parse = TRUE,
+        label.x.npc = "left",
+        label.y.npc = "top",
+        size = 3
+    ) +
+
+    facet_wrap(~ step, scales = "fixed") +
+    ylim(0, NA) +
+    xlab("Number of Cells") +
+    ylab("Peak RAM (MiB)") +
+    scale_x_continuous(breaks = as.numeric(nCell_order)) +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom"
+    )
+
+ggsave("Figs/report/substepPeak.pdf", p_peak, width = 8, height = 4)
+
+## agg and join diff size
+
+sizeComponentDiff %>%
+    filter(step %in% c("benchmarkAggPSM", "benchmarkJoinPSM")) %>%
+    ggplot(aes(x = component, y = step, fill = medianSizeMiB)) +
+    geom_tile() +
+    scale_fill_gradient2(
+        low = "blue", mid = "white", high = "red",
+        midpoint = 0)

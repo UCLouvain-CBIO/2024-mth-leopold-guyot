@@ -71,11 +71,16 @@ shift_coef <- 1
 shift_sd <- 0.3
 
 
-is_da <- colData(pepse)$pseudo_patient %in% c("3430861_d0",
-                                   "3430655_d2",
-                                   "3431452_d0",
-                                   "3431438_d2")
+is_pseudo_patient_da <- colData(pepse)$pseudo_patient %in% c(
+  "3430861_d0",
+  "3430655_d2",
+  "3431452_d0",
+  "3431438_d2"
+)
+is_NK <- colData(pepse)$cell_type_lowerres == "NK"
+is_da <- is_pseudo_patient_da & is_NK
 colData(pepse)$condition <- as.character(is_da)
+
 
 mat <- assay(pepse)
 
