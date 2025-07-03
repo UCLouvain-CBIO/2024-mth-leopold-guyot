@@ -54,7 +54,12 @@ plotSize <- objectSize %>%
     group_by(nCell) %>%
     summarise(sizeGB = mean(size) / (1024^3)) %>% # Divide by 1024^3 to get GB
     ggplot(aes(x = nCell, y = sizeGB, fill = nCell)) +
-    geom_col()
+    geom_col() + xlab(label = "Number of cells") + ylab(label = "Final object size in GB") +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom"
+    ) +
+    guides(color = guide_legend(title = NULL))
 
 plotTime <- benchmarkDF %>%
     # Convert `nCell` to a factor with levels ordered numerically
@@ -62,7 +67,11 @@ plotTime <- benchmarkDF %>%
     group_by(nCell, replicate) %>%
     summarise(time = sum(Elapsed_Time_sec) / 60) %>%
     ggplot(aes(x = nCell, y = time, color = nCell)) +
-    geom_boxplot()
+    geom_boxplot() + xlab(label = "Number of cells") + ylab(label = "Global pipeline runtime (minutes)") +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    )
 
 plotPeak <- benchmarkDF %>%
     group_by(nCell, replicate) %>%
@@ -74,6 +83,23 @@ plotPeak <- benchmarkDF %>%
     geom_col() +
     labs(y = "Peak RAM Used (GB)") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plotPeakBoxPlot <- benchmarkDF %>%
+    group_by(nCell, replicate) %>%
+    summarise(peak = max(Peak_RAM_Used_MiB) / 1024, .groups = "drop") %>%  # Convert to GB
+    mutate(nCell = factor(nCell, levels = sort(as.numeric(unique(nCell))))) %>%
+    ggplot(aes(x = nCell, y = peak, color = nCell)) +
+    geom_boxplot() +
+    labs(y = "Peak RAM Used (GB)", x = "Number of cells") +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    )
+
+ggsave("Figs/report/plotTimeVignette.pdf", plotTime, width = 10, height = 5)
+ggsave("Figs/report/plotSizeVignette.pdf", plotSize, width = 10, height = 6)
+ggsave("Figs/report/plotPeakVignette.pdf", plotPeakBoxPlot, width = 10, height = 5)
+
 
 plotRatio <- benchmarkDF %>%
     group_by(vignette_step) %>%
@@ -140,8 +166,67 @@ plotRatioComplete <- benchmarkDF %>%
     geom_bar(position = "dodge", stat = "identity") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+# Your desired mapping
+rename_map <- c(
+    "AggPSM" = "aggregatePSM",
+    "SCR" = "filterSCR",
+    "ScSums" = "filterSumSignal",
+    "NormToRef" = "divideByReference",
+    "Consensus" = "consensusMap",
+    "MissingData" = "zeroToNA",
+    "Join" = "joinPeptide",
+    "FilterCV" = "filterCV",
+    "NormPep" = "normPeptide",
+    "FilteringNA" = "filterNA",
+    "LogTransfo" = "logTransformation",
+    "AggPep" = "aggregatePeptide",
+    "NormPro" = "normProt1",
+    "Impute" = "impute",
+    "Batch" = "removeBatch",
+    "NormBatch" = "normProt2",
+    "FilterFeatures" = "filterPSM"
+)
+
+# Your pipeline order
+step_order <- c(
+    "filterPSM",
+    "filterSCR",
+    "filterSumSignal",
+    "divideByReference",
+    "aggregatePSM",
+    "consensusMap",
+    "zeroToNA",
+    "joinPeptide",
+    "filterCV",
+    "normPeptide",
+    "filterNA",
+    "logTransformation",
+    "aggregatePeptide",
+    "normProt1",
+    "impute",
+    "removeBatch",
+    "normProt2"
+)
+
+valid_original_levels <- intersect(names(rename_map), unique(benchmarkDF$vignette_step))
+rename_map <- rename_map[valid_original_levels]
+
+plotRatioComplete <- benchmarkDF %>%
+    mutate(vignette_step = recode(vignette_step, !!!rename_map)) %>%
+    filter(vignette_step %in% step_order) %>%   # Remove unneeded steps
+    group_by(vignette_step, nCell) %>%
+    summarise(meanTimePerStep = mean(Elapsed_Time_sec), .groups = "drop") %>%
+    mutate(nCell = as.numeric(as.character(nCell))) %>%
+    mutate(nCell = factor(nCell, levels = sort(unique(nCell)))) %>%
+    mutate(vignette_step = factor(vignette_step, levels = step_order)) %>%
+    ggplot(aes(x = vignette_step, y = meanTimePerStep, fill = nCell)) +
+    geom_bar(position = "dodge", stat = "identity") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab("Pipeline steps") + ylab("Mean time per step (seconds)")
+
+
 plotRatioComplete
-ggsave("Figs/vignetteBenchmark_ratioComplete.pdf", width = 10, height = 5)
+ggsave("Figs/report/vignetteBenchmark_ratioComplete.pdf", width = 10, height = 6)
 ggsave("Figs/vignetteBenchmark_ratioComplete.png", width = 10, height = 5)
 
 plotTime / plotPeak / plotSize
@@ -296,14 +381,14 @@ timeMedian <- peakRamTable %>%
     )
 
 
-ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) +
+timeMed <- ggplot(timeMedian, aes(nCell, step, fill = medianTimeElasped)) +
              geom_tile() +
              scale_fill_gradient2(
                  low = "white", high = "red",
                  midpoint = median(peakRamTable$Elapsed_Time_sec, na.rm = TRUE),
                  transform = "log2"
-             )
-ggsave("Figs/singleStepTime.png")
+             ) + xlab("Number of cells") + ylab("Function names")
+ggsave("Figs/report/singleStepTime.pdf", timeMed, width = 9, height = 7)
 convert_mib_to_gb <- function(mib) {
     gb <- mib * 0.001024
     return(gb)
