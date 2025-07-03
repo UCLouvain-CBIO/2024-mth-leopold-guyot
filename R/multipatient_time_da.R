@@ -137,6 +137,11 @@ pbMedRes <- rowData(hypothesisTest(object = pbModelMed, contrast = L))$condition
 pbModelSum <- suppressWarnings(msqrob(pepsePBsum, ~ 1 + cell_type_lowerres + condition))
 pbSumRes <- rowData(hypothesisTest(object = pbModelSum, contrast = L))$conditionTRUE
 
+saveRDS(list("scp" = scpRes,
+             "msqrob2" = msqRes,
+             "pseudobulkMean" = pbMeanRes,
+             "pseudobulkSum" = pbSumRes,
+             "pseudobulkMed" = pbMedRes), "dataOutput/slavovModels/resultsSimTime.rds")
 fdrtpr <- compute_performance(list("scp" = scpRes,
                                    "msqrob2" = msqRes,
                                    "pseudobulkMean" = pbMeanRes,
