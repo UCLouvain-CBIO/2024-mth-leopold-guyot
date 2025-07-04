@@ -5,15 +5,73 @@ library(peakRAM)
 library(scp)
 library(scpdata)
 
-sceToSe <- fonction(qfeat) {
-  
+leduc2022Generate <- function(base, nCell, SE) {
+  base <- base[, , -(135:138)]
+  nRun <- nCell %/% 18
+  nAssays <- length(base)
+  if (nRun <= nAssays) {
+    sampledAssays <- sample(seq_len(nAssays), nRun, replace = FALSE)
+  } else {
+    sampledAssays <- sample(seq_len(nAssays), nRun, replace = TRUE)
+  }
+  new_qfeatures <- base[, , 0]
+  psmCounter <- 0
+  for (i in seq_len(nRun)) {
+    assay_idx <- sampledAssays[i]
+    original_se <- getWithColData(base, assay_idx)
+    newSampleNames <- paste0("run_", i, "_RI", seq_len(18))
+    newAssay <- assay(original_se)
+    newFeaturesNames <- paste0(
+      "PSM_",
+      seq(
+        from = psmCounter + 1,
+        length.out = nrow(newAssay)
+      )
+    )
+    colnames(newAssay) <- newSampleNames
+    rownames(newAssay) <- newFeaturesNames
+
+    noise <- pmin(matrix(rnorm(n = length(newAssay), mean = 0, sd = 5),
+                         nrow = nrow(newAssay),
+                         ncol = ncol(newAssay)
+    ), 0)
+    noisyNewAssay <- newAssay + noise
+
+    newColData <- colData(original_se)
+    newColData$Set <- paste0("run_", i)
+    newColData$Channel <- as.character(newColData$Channel)
+    newColData$IsolationTimeStamp <- as.character(newColData$IsolationTimeStamp)
+    rownames(newColData) <- newSampleNames
+
+    newRowData <- rowData(original_se)
+    rownames(newRowData) <- newFeaturesNames
+
+    psmCounter <- psmCounter + nrow(newRowData)
+    if (SE) {
+      noisy_se <- SummarizedExperiment(
+        assays = list(noisyNewAssay),
+        rowData = newRowData,
+        colData = newColData
+      )
+    } else {
+      noisy_se <- SingleCellExperiment(
+        assays = list(noisyNewAssay),
+        rowData = newRowData,
+        colData = newColData
+      )
+    }
+
+    new_qfeatures <- addAssay(new_qfeatures, noisy_se, name = paste0("run_", i))
+  }
+  return(new_qfeatures)
 }
 
-benchWrapper <- function(replicate, subset_sizes = c(30, 60, 120), subsetRowData = FALSE) {
+benchWrapper <- function(replicate, nCell, subsetRowData = FALSE, SE) {
     results_list <- list()
 
-    for (size in subset_sizes) {
-        leduc <- scpdata::leduc2022_pSCoPE()[,, 1:size]
+    for (size in nCell) {
+        leduc <- scpdata::leduc2022_pSCoPE()
+        leduc2022Generate(leduc, nCell = nCell, SE = SE)
 
         if (subsetRowData) {
             for (assay in seq_along(leduc)) {
