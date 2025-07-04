@@ -34,7 +34,7 @@ Let \( X_{ij} \) denote the log-intensity of protein \( i \) in cell \( j \).
 We model the log-intensity as:
 
 $$
-X_{ij} = \mu_i + \epsilon_{ij} + A^{\text{patient}}_i \cdot \delta^{\text{patient}}_{i, p_j}
+X_{ij} = \mu_i + \epsilon_{ij} + A^{\text{patient}}_i \cdot \delta^{\text{patient}}_{i, p_j} + A^{\text{cell type}}_i \cdot \delta^{\text{cell type}}_{i, c_j}
 + A^{\text{treatment}}_i \cdot \delta^{\text{treatment}}_i \cdot \mathbb{I}_{t_j = 1}
 $$
 
@@ -42,11 +42,14 @@ Where:
 
 - \( \mu_i \): baseline log-intensity of protein \( i \) obtained from experimental data
 - \( \epsilon_{ij} \sim \mathcal{N}(0, \sigma_i^2) \): residual noise obtained from experimental data
-- \( A^{\text{patient}}_i \): indicator if protein \( i \) is affected by patient-specific shifts  
+- \( A^{\text{patient}}_i \): indicator if protein \( i \) is affected by patient-specific shifts
+- \( A^{\text{patient}}_i \): indicator if protein \( i \) is affected by cell type-specific shifts  
 - \( A^{\text{treatment}}_i \): indicator if protein \( i \) is affected by treatment  
-- \( p_j \in \{1, \ldots, P\} \): patient identity of cell \( j \)  
+- \( p_j \in \{1, \ldots, P\} \): patient identity of cell \( j \)
+- \( c_j \in \{1, \ldots, P\} \): cell type identity of cell \( j \)  
 - \( t_j \in \{0,1\} \): treatment status of cell \( j \) (1 = treated)  
-- \( \delta^{\text{patient}}_{i, p} \sim \mathcal{N}(0, \sigma_{\text{patient}}^2) \): patient-specific shift for protein \( i \) and patient \( p \)  
+- \( \delta^{\text{patient}}_{i, p} \sim \mathcal{N}(0, \sigma_{\text{patient}}^2) \): patient-specific shift for protein \( i \) and patient \( p \)
+- \( \delta^{\text{cell type}}_{i, c} \sim \mathcal{N}(0, \sigma_{\text{cell type}}^2) \): cell type-specific shift for protein \( i \) and cell type \( p \)  
 - \( \delta^{\text{treatment}}_i \sim \mathcal{N}(0, \sigma_{\text{treatment}}^2) \): treatment effect for protein \( i \)  
 - \( \mathbb{I}_{t_j = 1} \): indicator function equals 1 if cell \( j \) is treated, 0 otherwise
 
@@ -70,7 +73,7 @@ Where \( \pi_i \) is the experimentally observed missing rate of protein \( i \)
 nPatient = 16
 
 # Cells by patient/subtype
-nCellPatientSub = 50
+nCellPatientSub = 100
 
 
 nCellTot = nPatient * nCellPatientSub
@@ -81,6 +84,12 @@ patientSD <- 1
 # Prop of proteins shifted by patient effect
 
 patientEffect <- 0.3
+
+nCellTypePerPatient <- 5
+nCellPerType <- nCellPatientSub / nCellTypePerPatient
+
+cellTypeEffect <- 0.3       # proportion of proteins affected
+cellTypeShiftSD <- 1        # effect size
 
 # proportion of proteins affected by treatment
 treatmentEffect <- 0.3
@@ -170,6 +179,9 @@ colnames(simMatrix) <- cellIds
 
 ```{r shiftProtDef}
 nPatientShiftProt <- floor(patientEffect * nProt)
+patientShiftProteins <- sample(proteinNames, nPatientShiftProt)
+
+
 ```
 
 ```{r prepColData}
@@ -183,6 +195,18 @@ colData <- data.frame(
   patientShift = numeric(nCellTot),
   stringsAsFactors = FALSE
 )
+
+cellTypes <- character(nCellTot)
+for (i in 1:nPatient) {
+  for (j in 1:nCellTypePerPatient) {
+    startIdx <- ((i - 1) * nCellPatientSub) + ((j - 1) * nCellPerType) + 1
+    endIdx <- startIdx + nCellPerType - 1
+    cellTypes[startIdx:endIdx] <- paste0("Type", j)
+  }
+}
+
+colData$cellType <- cellTypes
+
 ```
 
 ```{r simulation}
@@ -192,8 +216,6 @@ cellCounter <- 1
 for (i in 1:nPatient) {
   patientShift <- numeric(nProt)
   names(patientShift) <- proteinNames
-  # Choose which proteins will receive the shift
-  patientShiftProteins <- sample(proteinNames, nPatientShiftProt)
   patientShift[patientShiftProteins] <- rnorm(nPatientShiftProt, mean = 0, sd = patientSD)
   
   for (k in 1:nCellPatientSub) {
@@ -225,7 +247,36 @@ simSCE <- SingleCellExperiment(assays = SimpleList(simMatrix),
                      rowData = rowData(sce),
                      colData = colData)
 simSCE
+```
+## Add cell type effect
 
+```{r}
+nCellTypeShiftProt <- floor(cellTypeEffect * nProt)
+cellTypeShiftProteins <- sample(proteinNames, nCellTypeShiftProt)
+
+rowData(simSCE)$cellTypeAffected <- proteinNames %in% cellTypeShiftProteins
+exprMat <- assay(simSCE)
+
+# For each patient
+for (i in 1:nPatient) {
+  for (j in 1:nCellTypePerPatient) {
+    thisCellType <- paste0("Type", j)
+    cellsIdx <- which(colData$patient == paste0("P", i) &
+                       colData$cellType == thisCellType)
+    
+    # Define cell-type-specific shift (same for all cells of that type)
+    shiftVec <- numeric(nProt)
+    names(shiftVec) <- proteinNames
+    shiftVec[cellTypeShiftProteins] <- rnorm(nCellTypeShiftProt, mean = 0, sd = cellTypeShiftSD)
+    
+    # Apply shift to these cells
+    exprMat[cellTypeShiftProteins, cellsIdx] <- exprMat[cellTypeShiftProteins, cellsIdx] +
+      shiftVec[cellTypeShiftProteins]
+  }
+}
+
+# Save back to SCE
+assay(simSCE) <- exprMat
 ```
 
 ## Add treatment effect
@@ -306,11 +357,20 @@ ggplot(data.frame(intensity = int_vec), aes(x = intensity)) +
 ## Apply scplainer
 
 ```{r scplainer}
-scpSIM <- scpModelWorkflow(simSCE, formula = ~ 1 + patient + treatment, verbose = FALSE)
+scpSIM <- scpModelWorkflow(simSCE, formula = ~ 1 + patient + treatment + cellType, verbose = FALSE)
 scpRes <- scpDifferentialAnalysis(
     scpSIM,
     contrasts = list(c("treatment", "control", "treated"))
 )[[1]]
+pca <- scpComponentAnalysis(scpSIM, method = "APCA", residuals = FALSE, unmodelled = FALSE)
+colData(scpSIM)$cell <- colData(scpSIM)$cellId
+bySamplePCs <- scpAnnotateResults(
+    pca$bySample, colData(scpSIM), by = "cell"
+)
+scpComponentPlot(bySamplePCs, pointParams = list(
+        aes(colour = cellType), 
+        alpha = 0.6
+    ))
 ```
 ## Apply msqrob2
 ```{r defineContrast}
@@ -318,7 +378,7 @@ L <- makeContrast("treatmenttreated=0", parameterNames = c("treatmenttreated"))
 ```
 
 ```{r msqrob2}
-msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ (1 | patient) + treatment))
+msqSIM <- suppressWarnings(msqrob(simSCE, formula = ~ (1 | patient) + treatment + cellType))
 msqRes <- rowData(hypothesisTest(object = msqSIM, contrast = L))$treatmenttreated
 ```
 
@@ -356,8 +416,8 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
 }
 
 
-pbSIM <- aggregate_se(simSCE, c("patient", "treatment"), fun = mean)
-pbSIM <- suppressWarnings(msqrob(pbSIM, ~ 1 + patient + treatment))
+pbSIM <- aggregate_se(simSCE, c("patient", "treatment", "cellType"), fun = mean)
+pbSIM <- suppressWarnings(msqrob(pbSIM, ~ 1 + patient + treatment + cellType))
 pbRes <- rowData(hypothesisTest(object = pbSIM, contrast = L))$treatmenttreated
 ```
 

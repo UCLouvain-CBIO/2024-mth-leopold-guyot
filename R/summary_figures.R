@@ -270,10 +270,16 @@ propTable <- sizeTable %>%
 sizeWithProp <- ggplot(propTable, aes(fill = component, y = size, x = nCell)) +
     geom_bar(position="stack", stat="identity") +
     ylab("Total Size (MiB)") +
-    xlab("Number of Cells by Assay")
+    xlab("Number of Cells per Assay")
+ggsave(filename = "Figs/report/sizebyCellPerAssay.pdf", width = 5, height = 10)
 ggsave(filename = "sizeByAssaySize.png")
 library(rlang)
-
+var_labels <- c(
+    nCol = "Number of rowData Variables",
+    nFeat = "Number of Features",
+    nCell = "Cells per Assay",
+    nAssay = "Number of Assays"
+)
 create_plot <- function(df, x_var, color_var, fixed_filters) {
     df_filtered <- df %>%
         filter(!!!fixed_filters)
@@ -281,7 +287,14 @@ create_plot <- function(df, x_var, color_var, fixed_filters) {
     ggplot(df_filtered, aes(x = .data[[x_var]], y = sizeTotal_MiB, color = factor(.data[[color_var]]))) +
         geom_point() +
         geom_line(alpha = 0.8) +
-        labs(color = color_var, x = x_var, y = "Total size (MiB)")
+        labs(
+            color = var_labels[[color_var]],
+            x = var_labels[[x_var]],
+            y = "Total size (MiB)"
+        ) +
+        theme_minimal(base_size = 14) +
+        theme(legend.position = "bottom")
+
 }
 
 all_vars <- c("nCell", "nFeat", "nCol", "nAssay")
@@ -476,6 +489,8 @@ subsetCombined <- peakRamTable %>%
 # Split data
 quad_data <- subsetCombined %>% filter(step == "benchmarkFilterSamples")
 lin_data  <- subsetCombined %>% filter(step != "benchmarkFilterSamples")
+lm(Elapsed_Time_sec ~ nCellNum + I(nCellNum^2), data = quad_data)
+lm(Elapsed_Time_sec ~ poly(nCellNum, 2, raw = TRUE), data = quad_data)
 
 p_time_mixed <- ggplot(subsetCombined, aes(x = nCellNum, y = Elapsed_Time_sec)) +
     geom_boxplot(
@@ -489,13 +504,13 @@ p_time_mixed <- ggplot(subsetCombined, aes(x = nCellNum, y = Elapsed_Time_sec)) 
         data = quad_data,
         aes(color = step),
         method = "lm",
-        formula = y ~ poly(x, 2),
+        formula = y ~ poly(x, 2, raw = TRUE),
         se = TRUE
     ) +
     stat_poly_eq(
         data = quad_data,
         aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
-        formula = y ~ poly(x, 2),
+        formula = y ~ poly(x, 2, raw = TRUE),
         parse = TRUE,
         label.x.npc = "left",
         label.y.npc = "top",
