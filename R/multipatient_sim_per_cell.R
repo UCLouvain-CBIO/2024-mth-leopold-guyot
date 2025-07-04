@@ -77,7 +77,8 @@ is_pseudo_patient_da <- colData(pepse)$pseudo_patient %in% c(
   "3431452_d0",
   "3431438_d2"
 )
-is_da <- is_pseudo_patient_da
+is_NK <- colData(pepse)$cell_type_lowerres == "NK"
+is_da <- is_pseudo_patient_da & is_NK
 colData(pepse)$condition <- as.character(is_da)
 
 
@@ -106,14 +107,14 @@ assay(pepse) <- mat
 
 saveRDS(pepse, "dataOutput/slavovModels/conditionIntroducedSE.rds")
 pepsePBmean <- aggregate_se(pepse,
-             group_by_cols = c("cell_type_lowerres", "patient", "condition"),
-             fun = mean)
+                            group_by_cols = c("cell_type_lowerres", "patient", "condition"),
+                            fun = mean)
 pepsePBmed <- aggregate_se(pepse,
-                            group_by_cols = c("cell_type_lowerres", "patient", "condition"),
-                            fun = median)
+                           group_by_cols = c("cell_type_lowerres", "patient", "condition"),
+                           fun = median)
 pepsePBsum <- aggregate_se(pepse,
-                            group_by_cols = c("cell_type_lowerres", "patient", "condition"),
-                            fun = sum)
+                           group_by_cols = c("cell_type_lowerres", "patient", "condition"),
+                           fun = sum)
 scpModel <- scpModelWorkflow(pepse, formula = ~ 1 + cell_type_lowerres + patient + condition, verbose = TRUE)
 scpRes <- scpDifferentialAnalysis(
   scpModel,
