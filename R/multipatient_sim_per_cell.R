@@ -22,7 +22,8 @@ subpepColdata <- pep[, c("sc_id", "raw.file")] %>%
   filter(sc_id %in% coldata$sc_id)
 coldataJoined <- left_join(coldata, subpepColdata, by = "sc_id")
 rownames(coldataJoined) <- rownames(coldata)
-
+coldataJoined <- coldataJoined %>% 
+  separate_wider_delim(cols = patient_id, delim = "_", names = c("patient", "dayp"), cols_remove = FALSE)
 # peptides
 subpep <- pep[, c("modseq", "sc_id", "pep_quant")]
 subpep <- subpep[subpep$sc_id %in% rownames(coldataJoined),]

@@ -5,7 +5,11 @@ library(peakRAM)
 library(scp)
 library(scpdata)
 
-benchWrapper <- function(replicate, subset_sizes = c(30, 60), subsetRowData = FALSE) {
+sceToSe <- fonction(qfeat) {
+  
+}
+
+benchWrapper <- function(replicate, subset_sizes = c(30, 60, 120), subsetRowData = FALSE) {
     results_list <- list()
 
     for (size in subset_sizes) {
