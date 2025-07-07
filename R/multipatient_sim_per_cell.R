@@ -22,7 +22,7 @@ subpepColdata <- pep[, c("sc_id", "raw.file")] %>%
   filter(sc_id %in% coldata$sc_id)
 coldataJoined <- left_join(coldata, subpepColdata, by = "sc_id")
 rownames(coldataJoined) <- rownames(coldata)
-coldataJoined <- coldataJoined %>% 
+coldataJoined <- coldataJoined %>%
   separate_wider_delim(cols = patient_id, delim = "_", names = c("patient", "dayp"), cols_remove = FALSE)
 # peptides
 subpep <- pep[, c("modseq", "sc_id", "pep_quant")]
@@ -58,7 +58,10 @@ dayRes <- scpDifferentialAnalysis(
   as.data.frame() %>%
   filter(padj <= 0.1) # less conservative
 
-pepse <- pepse[!rownames(pepse) %in% dayRes$feature,]
+# mat <- assay(pepse)
+# design <- model.matrix(~ patient + cell_type_lowerres, data = as.data.frame(colData(pepse)))
+# assay(pepse) <- removeBatchEffect(mat, batch = colData(pepse)$day, design = design)
+
 
 colData(pepse) <- colData(pepse) %>%
   as.data.frame %>%
@@ -107,49 +110,70 @@ rowData(pepse)$shifted <- peptide_shifts != 0
 assay(pepse) <- mat
 
 saveRDS(pepse, "dataOutput/slavovModels/conditionIntroducedSE.rds")
-pepsePBmean <- aggregate_se(pepse,
-                            group_by_cols = c("cell_type_lowerres", "patient", "condition"),
-                            fun = mean)
-pepsePBmed <- aggregate_se(pepse,
-                           group_by_cols = c("cell_type_lowerres", "patient", "condition"),
-                           fun = median)
-pepsePBsum <- aggregate_se(pepse,
-                           group_by_cols = c("cell_type_lowerres", "patient", "condition"),
-                           fun = sum)
-scpModel <- scpModelWorkflow(pepse, formula = ~ 1 + cell_type_lowerres + patient + condition, verbose = TRUE)
-scpRes <- scpDifferentialAnalysis(
-  scpModel,
-  contrasts = list(c("condition", "FALSE", "TRUE"))
-)[[1]]
 
-colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
-rownames(scpRes) <- scpRes$feature
+cell_types <- unique(colData(pepse)$cell_type_lowerres)
+all_results <- list()
 
-L <- makeContrast("conditionTRUE=0", parameterNames = c("conditionTRUE"))
-msqModel <- suppressWarnings(msqrob(pepse, formula = ~ cell_type_lowerres + condition + (1 | patient)))
-msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$conditionTRUE
+for (ct in cell_types) {
+  message("Processing cell type: ", ct)
 
-pbModelMean <- suppressWarnings(msqrob(pepsePBmean, ~ 1 + cell_type_lowerres + condition))
-pbMeanRes <- rowData(hypothesisTest(object = pbModelMean, contrast = L))$conditionTRUE
+  pepse_ct <- pepse[, colData(pepse)$cell_type_lowerres == ct]
 
-pbModelMed <- suppressWarnings(msqrob(pepsePBmed, ~ 1 + cell_type_lowerres + condition))
-pbMedRes <- rowData(hypothesisTest(object = pbModelMed, contrast = L))$conditionTRUE
+  if (ncol(pepse_ct) < 10) {
+    warning("Skipping ", ct, " - too few cells")
+    next
+  }
 
-pbModelSum <- suppressWarnings(msqrob(pepsePBsum, ~ 1 + cell_type_lowerres + condition))
-pbSumRes <- rowData(hypothesisTest(object = pbModelSum, contrast = L))$conditionTRUE
+  pepse_ct <- filterNA(pepse_ct, pNA = 0.98)
 
-saveRDS(list("scp" = scpRes,
-             "msqrob2" = msqRes,
-             "pseudobulkMean" = pbMeanRes,
-             "pseudobulkSum" = pbSumRes,
-             "pseudobulkMed" = pbMedRes), "dataOutput/slavovModels/resultsSimTime.rds")
-fdrtpr <- compute_performance(list("scp" = scpRes,
-                                   "msqrob2" = msqRes,
-                                   "pseudobulkMean" = pbMeanRes,
-                                   "pseudobulkSum" = pbSumRes,
-                                   "pseudobulkMed" = pbMedRes), rowdata = rowData(pepse))
-write.csv(fdrtpr, "dataOutput/slavovModels/fdrtpr.csv")
-plot <- ggplot(fdrtpr, aes(x = FDR, y = TPR, color = method)) +
+  ## SCP
+  scpModel_ct <- scpModelWorkflow(
+    pepse_ct,
+    formula = ~ 1 + patient + condition,
+    verbose = TRUE
+  )
+  scpRes_ct <- scpDifferentialAnalysis(
+    scpModel_ct,
+    contrasts = list(c("condition", "FALSE", "TRUE"))
+  )[[1]]
+  colnames(scpRes_ct) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
+  rownames(scpRes_ct) <- scpRes_ct$feature
+
+  ## msqrob2 single-cell
+  L <- makeContrast("conditionTRUE=0", parameterNames = c("conditionTRUE"))
+  msqModel_ct <- suppressWarnings(msqrob(pepse_ct, formula = ~ condition + (1|patient)))
+  msqRes_ct <- rowData(hypothesisTest(msqModel_ct, contrast = L))$conditionTRUE
+
+  ## Pseudobulk
+  pepsePBmean_ct <- aggregate_se(pepse_ct,
+                                 group_by_cols = c("patient", "condition"),
+                                 fun = mean)
+  pbModelMean_ct <- suppressWarnings(msqrob(pepsePBmean_ct, ~ 1 + condition))
+  pbMeanRes_ct <- rowData(hypothesisTest(pbModelMean_ct, contrast = L))$conditionTRUE
+
+  ## collect for performance
+  res_list <- list(
+    scp = scpRes_ct,
+    msqrob2 = msqRes_ct,
+    pseudobulkMean = pbMeanRes_ct
+  )
+
+  ## compute FDR/TPR
+  fdrtpr_ct <- compute_performance(
+    res_list,
+    rowdata = rowData(pepse_ct)
+  )
+  fdrtpr_ct$cell_type <- ct
+
+  all_results[[ct]] <- fdrtpr_ct
+}
+
+fdrtpr_all <- bind_rows(all_results)
+
+write.csv(fdrtpr_all, "dataOutput/slavovModels/fdrtpr_byCellType.csv")
+
+plot <- ggplot(fdrtpr_all, aes(x = FDR, y = TPR, color = method)) +
+  facet_wrap(~cell_type) +
   geom_vline(
     xintercept = c(0.01, 0.05, 0.1),
     linetype = "dashed", color = "grey50", linewidth = 0.3
@@ -158,12 +182,94 @@ plot <- ggplot(fdrtpr, aes(x = FDR, y = TPR, color = method)) +
   geom_line(size = 0.7) +
   scale_x_continuous(
     limits = c(0, 1),
-    breaks = c(0.01, 0.05, 0.2, 0.4, 0.8, 1),
-    labels = scales::label_number()
+    breaks = c(0.01, 0.05, 0.2, 0.4, 0.8, 1)
   ) +
   scale_y_continuous(
     limits = c(0, 1),
     breaks = seq(0, 1, 0.2)
   )
 
-ggsave("Figs/fdrtpr.pdf")
+ggsave("Figs/fdrtpr_byCellType.pdf")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+#
+#
+# pepsePBmean <- aggregate_se(pepse,
+#                             group_by_cols = c("cell_type_lowerres", "patient", "condition"),
+#                             fun = mean)
+# pepsePBmed <- aggregate_se(pepse,
+#                            group_by_cols = c("cell_type_lowerres", "patient", "condition"),
+#                            fun = median)
+# pepsePBsum <- aggregate_se(pepse,
+#                            group_by_cols = c("cell_type_lowerres", "patient", "condition"),
+#                            fun = sum)
+# scpModel <- scpModelWorkflow(pepse, formula = ~ 1 + cell_type_lowerres + patient + condition, verbose = TRUE)
+# scpRes <- scpDifferentialAnalysis(
+#   scpModel,
+#   contrasts = list(c("condition", "FALSE", "TRUE"))
+# )[[1]]
+#
+# colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
+# rownames(scpRes) <- scpRes$feature
+#
+# L <- makeContrast("conditionTRUE=0", parameterNames = c("conditionTRUE"))
+# msqModel <- suppressWarnings(msqrob(pepse, formula = ~ (cell_type_lowerres * condition) + (1 | patient)))
+# msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$conditionTRUE
+#
+# pbModelMean <- suppressWarnings(msqrob(pepsePBmean, ~ 1 + cell_type_lowerres * condition))
+# pbMeanRes <- rowData(hypothesisTest(object = pbModelMean, contrast = L))$conditionTRUE
+#
+# pbModelMed <- suppressWarnings(msqrob(pepsePBmed, ~ 1 + cell_type_lowerres * condition))
+# pbMedRes <- rowData(hypothesisTest(object = pbModelMed, contrast = L))$conditionTRUE
+#
+# pbModelSum <- suppressWarnings(msqrob(pepsePBsum, ~ 1 + cell_type_lowerres * condition))
+# pbSumRes <- rowData(hypothesisTest(object = pbModelSum, contrast = L))$conditionTRUE
+#
+# saveRDS(list("scp" = scpRes,
+#              "msqrob2" = msqRes,
+#              "pseudobulkMean" = pbMeanRes,
+#              "pseudobulkSum" = pbSumRes,
+#              "pseudobulkMed" = pbMedRes), "dataOutput/slavovModels/resultsSimSingleCT.rds")
+# fdrtpr <- compute_performance(list("scp" = scpRes,
+#                                    "msqrob2" = msqRes,
+#                                    "pseudobulkMean" = pbMeanRes,
+#                                    "pseudobulkSum" = pbSumRes,
+#                                    "pseudobulkMed" = pbMedRes), rowdata = rowData(pepse))
+# write.csv(fdrtpr, "dataOutput/slavovModels/fdrtpr_singleCT.csv")
+# plot <- ggplot(fdrtpr, aes(x = FDR, y = TPR, color = method)) +
+#   geom_vline(
+#     xintercept = c(0.01, 0.05, 0.1),
+#     linetype = "dashed", color = "grey50", linewidth = 0.3
+#   ) +
+#   geom_point(size = 1, alpha = 0.8) +
+#   geom_line(size = 0.7) +
+#   scale_x_continuous(
+#     limits = c(0, 1),
+#     breaks = c(0.01, 0.05, 0.2, 0.4, 0.8, 1),
+#     labels = scales::label_number()
+#   ) +
+#   scale_y_continuous(
+#     limits = c(0, 1),
+#     breaks = seq(0, 1, 0.2)
+#   )
+#
+# ggsave("Figs/fdrtpr_singleCT.pdf")
