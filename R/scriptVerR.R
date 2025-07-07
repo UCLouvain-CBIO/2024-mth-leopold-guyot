@@ -71,7 +71,7 @@ benchWrapper <- function(replicate, nCell, subsetRowData = FALSE, SE) {
 
     for (size in nCell) {
         leduc <- scpdata::leduc2022_pSCoPE()
-        leduc2022Generate(leduc, nCell = nCell, SE = SE)
+        leduc2022Generate(leduc, nCell = size, SE = SE)
 
         if (subsetRowData) {
             for (assay in seq_along(leduc)) {
