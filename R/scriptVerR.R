@@ -4,6 +4,8 @@ library(QFeatures)
 library(peakRAM)
 library(scp)
 library(scpdata)
+library(SingleCellExperiment)
+
 
 leduc2022Generate <- function(base, nCell, SE) {
   base <- base[, , -(135:138)]
@@ -71,7 +73,7 @@ benchWrapper <- function(replicate, nCell, subsetRowData = FALSE, SE) {
 
     for (size in nCell) {
         leduc <- scpdata::leduc2022_pSCoPE()
-        leduc2022Generate(leduc, nCell = size, SE = SE)
+        leduc <- leduc2022Generate(leduc, nCell = size, SE = SE)
 
         if (subsetRowData) {
             for (assay in seq_along(leduc)) {
@@ -102,3 +104,4 @@ benchWrapper <- function(replicate, nCell, subsetRowData = FALSE, SE) {
 
     return(do.call(rbind, results_list))
 }
+
