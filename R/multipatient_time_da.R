@@ -24,6 +24,7 @@ coldataJoined <- left_join(coldata, subpepColdata, by = "sc_id")
 rownames(coldataJoined) <- rownames(coldata)
 
 # peptides
+# TODO quantitation
 subpep <- pep[, c("modseq", "sc_id", "pep_quant")]
 subpep <- subpep[subpep$sc_id %in% rownames(coldataJoined),]
 widepep <- pivot_wider(subpep, names_from = "sc_id", values_from = "pep_quant")
@@ -114,6 +115,7 @@ pepsePBmed <- aggregate_se(pepse,
 pepsePBsum <- aggregate_se(pepse,
                             group_by_cols = c("cell_type_lowerres", "patient", "condition"),
                             fun = sum)
+# TODO pseudo_patient
 scpModel <- scpModelWorkflow(pepse, formula = ~ 1 + cell_type_lowerres + patient + condition, verbose = TRUE)
 scpRes <- scpDifferentialAnalysis(
   scpModel,

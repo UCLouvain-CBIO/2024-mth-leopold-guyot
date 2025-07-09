@@ -293,7 +293,8 @@ create_plot <- function(df, x_var, color_var, fixed_filters) {
             y = "Total size (MiB)"
         ) +
         theme_minimal(base_size = 14) +
-        theme(legend.position = "bottom")
+        theme(legend.position = "bottom") +
+        ylim(0, NA)
 
 }
 
@@ -453,8 +454,8 @@ peakRamTableOrdered <- peakRamTable %>%
     summarise("medianTimeSec" = median(Elapsed_Time_sec)) %>%
     filter(step == "benchmarkFilterSamples")
 
-ggplotly(ggplot(peakRamTableOrdered, aes(x = nCell, y = medianTimeSec)) +
-             geom_line())
+#ggplotly(ggplot(peakRamTableOrdered, aes(x = nCell, y = medianTimeSec)) +
+#             geom_line())
 ggsave("Figs/singleStepSample.png")
 
 filterSample <- peakRamTable %>%
@@ -479,7 +480,7 @@ joinPSM <- peakRamTable %>%
     )
 
 subsetCombined <- peakRamTable %>%
-    filter(step %in% c("benchmarkJoinPSM", "benchmarkAggPSM", "benchmarkFilterSamples")) %>%
+    filter(step %in% c("benchmarkJoinPSM", "benchmarkAggPSM", "benchmarkFilterSamples", "benchmarkZeroisNA")) %>%
     group_by(step, nCell) %>%
     mutate(
         nCellFactor = factor(nCell, levels = nCell_order),
