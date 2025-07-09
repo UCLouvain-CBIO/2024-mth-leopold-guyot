@@ -1,76 +1,133 @@
 library("tidyverse")
 
-noSub <- read.csv(file = "dataOutput/optimisationsBench/noSubsetRowData.csv")
-sub <- read.csv(file = "dataOutput/optimisationsBench/subsetRowData.csv")
+noSubSCE <- read.csv(file = "dataOutput/optimisationsBench/noSubsetRowDataSCE.csv")
+subSCE <- read.csv(file = "dataOutput/optimisationsBench/subsetRowDataSCE.csv")
+noSubSE <- read.csv(file = "dataOutput/optimisationsBench/noSubsetRowDataSE.csv")
+subSE <- read.csv(file = "dataOutput/optimisationsBench/subsetRowDataSE.csv")
 
-noSub <- noSub %>%
-    separate(X, into = c("nAssay", "rep"), sep = "\\.") %>%
-    mutate(numNAssay = as.numeric(nAssay)) %>%
-    mutate(nAssay = factor(nAssay, levels = sort(unique(as.numeric(nAssay))))) %>%
-    mutate(sub = "noSub")
+noSubSE <- noSubSE %>%
+    separate(X, into = c("nCell", "rep"), sep = "\\.") %>%
+    mutate(subsetRowData = FALSE) %>%
+    mutate(SE = TRUE) %>%
+    filter(version == "base")
 
-sub <- sub %>%
-    separate(X, into = c("nAssay", "rep"), sep = "\\.") %>%
-    mutate(numNAssay = as.numeric(nAssay)) %>%
-    mutate(nAssay = factor(nAssay, levels = sort(unique(as.numeric(nAssay))))) %>%
-    mutate(sub = "sub")
+subSE <- subSE %>%
+    separate(X, into = c("nCell", "rep"), sep = "\\.") %>%
+    mutate(subsetRowData = TRUE) %>%
+    mutate(SE = TRUE) %>%
+    filter(version == "allOpti")
 
-combined <- rbind(sub, noSub) %>%
-    filter(nAssay == 60) %>%
-    group_by(sub, Function_Call, version, numNAssay) %>%
-    summarise("medianTime" = median(Elapsed_Time_sec)) %>%
-    mutate(opti = paste(sub, version, sep = "_")) %>%
-    filter(opti %in% c("noSub_aggregation",
-                            "noSub_base",
-                            "noSub_subsetByColData",
-                            "sub_base",
-                            "sub_allOpti")) %>%
-    mutate(opti = factor(opti, levels = c(
-        "noSub_base",
-        "noSub_subsetByColData",
-        "noSub_aggregation",
-        "sub_base",
-        "sub_allOpti"
-    )))
-combinedRAM <- rbind(sub, noSub) %>%
-    filter(nAssay == 60) %>%
-    group_by(sub, Function_Call, version, numNAssay) %>%
-    summarise("peakRam" = max(Peak_RAM_Used_MiB)) %>%
-    mutate(opti = paste(sub, version, sep = "_")) %>%
-    filter(opti %in% c("noSub_aggregation",
-                       "noSub_base",
-                       "noSub_subsetByColData",
-                       "sub_base",
-                       "sub_allOpti")) %>%
-    mutate(opti = factor(opti, levels = c(
-        "noSub_base",
-        "noSub_subsetByColData",
-        "noSub_aggregation",
-        "sub_base",
-        "sub_allOpti"
-    )))
+noSubSCE <- noSubSCE %>%
+    separate(X, into = c("nCell", "rep"), sep = "\\.") %>%
+    mutate(subsetRowData = FALSE) %>%
+    mutate(SE = FALSE) %>%
+    filter(version != "allOpti")
 
-combinedUsedRAM <- rbind(sub, noSub) %>%
-    filter(nAssay == 60) %>%
-    group_by(sub, Function_Call, version, numNAssay) %>%
-    summarise("usedRam" = median(Total_RAM_Used_MiB)) %>%
-    mutate(opti = paste(sub, version, sep = "_")) %>%
-    filter(opti %in% c("noSub_aggregation",
-                       "noSub_base",
-                       "noSub_subsetByColData",
-                       "sub_base",
-                       "sub_allOpti")) %>%
-    mutate(opti = factor(opti, levels = c(
-        "noSub_base",
-        "noSub_subsetByColData",
-        "noSub_aggregation",
-        "sub_base",
-        "sub_allOpti"
-    )))
+subSCE <- subSCE %>%
+    separate(X, into = c("nCell", "rep"), sep = "\\.") %>%
+    mutate(subsetRowData = TRUE) %>%
+    mutate(SE = FALSE) %>%
+    filter(version == "base")
 
-ggplot(combined, aes(x = opti, y = medianTime, colour = Function_Call))+
-    geom_col(aes(fill = Function_Call))
-ggplot(combinedRAM, aes(x = opti, y = peakRam, colour = Function_Call))+
-    geom_col(aes(fill = Function_Call))
-ggplot(combinedUsedRAM, aes(x = opti, y = usedRam, colour = Function_Call))+
-    geom_col(aes(fill = Function_Call))
+combined <- rbind(noSubSCE, subSCE, noSubSE, subSE) %>%
+    mutate(versionComplete = paste(version, SE, subsetRowData, sep = "_"))
+
+combined_labeled <- combined %>%
+    separate(versionComplete, into = c("function_type", "SE", "subsetRowData"), sep = "_") %>%
+    mutate(
+        SE = SE == "TRUE",
+        subsetRowData = subsetRowData == "TRUE",
+        versionLabel = case_when(
+            function_type == "aggregation" ~ "Aggregation (no subset, no SE)",
+            function_type == "allOpti" & subsetRowData & SE ~ "All Optimisations (subset, SE)",
+            function_type == "base" & !subsetRowData & !SE ~ "Base (no subset, no SE)",
+            function_type == "base" & subsetRowData ~ "Base (subset)",
+            function_type == "base" & SE ~ "Base (SE)",
+            function_type == "subsetByColData" ~ "Subset by ColData (no subset, no SE)",
+            TRUE ~ function_type
+        )
+    ) %>%
+    mutate(
+        versionLabel = factor(
+            versionLabel,
+            levels = c(
+                "Base (no subset, no SE)",
+                "Subset by ColData (no subset, no SE)",
+                "Aggregation (no subset, no SE)",
+                "Base (SE)",
+                "Base (subset)",
+                "All Optimisations (subset, SE)"
+            )
+        )
+    )
+
+## function of time
+
+total_df <- combined_labeled %>%
+    group_by(versionLabel, nCell, replicate) %>%
+    summarise(totalRuntime = sum(Elapsed_Time_sec), maxPeakRAM = max(Peak_RAM_Used_MiB), .groups = "drop")
+
+summary_total <- total_df %>%
+    group_by(versionLabel, nCell) %>%
+    summarise(medianTotalRuntime = median(totalRuntime),
+              medianMaxPeakRAM = max(maxPeakRAM),
+              .groups = "drop")
+
+ggplot(summary_total, aes(x = as.numeric(nCell), y = medianTotalRuntime, color = versionLabel)) +
+    geom_line(size = 1) +
+    geom_point() +
+    labs(
+        x = "Number of Cells (nCell)",
+        y = "Median Total Runtime (sec)",
+        color = "Version"
+    ) +
+    theme_minimal() +
+    xlim(0, NA)
+
+ggplot(summary_total, aes(x = as.numeric(nCell), y = medianMaxPeakRAM, color = versionLabel)) +
+    geom_line(size = 1) +
+    geom_point() +
+    labs(
+        x = "Number of Cells (nCell)",
+        y = "Median Total Runtime (sec)",
+        color = "Version"
+    ) +
+    theme_minimal()
+
+#### MAX cells
+
+summary_df_time <- combined_labeled %>%
+    filter(nCell == 4000) %>%
+    group_by(versionLabel, Function_Call) %>%
+    summarise(medianRuntime = median(Elapsed_Time_sec))
+
+summary_df_ram <- combined_labeled %>%
+    filter(nCell == 4000) %>%
+    group_by(versionLabel, Function_Call) %>%
+    summarise(medianRAM = median(Total_RAM_Used_MiB))
+
+summary_df_peak <- combined_labeled %>%
+    filter(nCell == 4000) %>%
+    group_by(versionLabel) %>%
+    summarise(maxPeakRAM = max(Peak_RAM_Used_MiB))
+
+time4000 <- ggplot(summary_df_time, aes(x = versionLabel, y = medianRuntime, colour = Function_Call)) +
+    geom_col(aes(fill = Function_Call)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("Figs/report/time4000.pdf", time4000)
+
+RAM4000 <- ggplot(summary_df_ram, aes(x = versionLabel, y = medianRAM, colour = Function_Call)) +
+    geom_col(aes(fill = Function_Call)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("Figs/report/RAM4000.pdf", RAM4000)
+
+peak4000 <- ggplot(summary_df_peak, aes(x = versionLabel, y = maxPeakRAM, colour = versionLabel)) +
+    geom_col(aes(fill = versionLabel)) +
+    theme_minimal()+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("Figs/report/peak4000.pdf", peak4000)
