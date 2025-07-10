@@ -20,17 +20,17 @@ compute_performance <- function(modRes, rowdata) {
     select(sid, is_da) %>%
     distinct() %>%
     column_to_rownames("sid")
-  
+
   adjPval_df <- df %>%
     select(sid, method, adjPval) %>%
     pivot_wider(names_from = method, values_from = adjPval) %>%
     column_to_rownames("sid")
-  
+
   cobdata <- COBRAData(
     padj = as.data.frame(adjPval_df),
     truth = as.data.frame(truth_df)
   )
-  
+
   perf <- calculate_performance(cobdata,
                                 binary_truth = "is_da",
                                 aspects = "fdrtpr",
@@ -69,14 +69,52 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
   return(new_se)
 }
 
+## Explore model coefficients
+
+sigma <- lapply(mod, function(x) x$sigma)
+sigmadf <- data.frame(name = names(sigma), sigma = as.numeric(sigma))
+coef <- lapply(mod, function(x) x$coefficients)
+coefdf <- as.data.frame(do.call(rbind, coef))
+ggplot(sigmadf, aes(x = sigma)) + geom_density()
+
+coefdf %>%
+  filter(grepl("cell_type", rownames(coefdf))) %>%
+  ggplot(aes(x = Estimate)) + geom_density()
+
+coefdf %>%
+  filter(grepl("patient", rownames(coefdf))) %>%
+  ggplot(aes(x = Estimate)) + geom_density()
+
+
+## Simulate data
+
 simData <- simulate_peptide_data(
   mod,
-  n_cells_per_comb = 150,
+  n_cells_per_comb = 25,
   cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
   n_synthetic_patients = 16
 )
 
 rownames(simData) <- rowData(simData)$peptide
+
+modscp <- scpModelWorkflow(simData, formula = ~ patient_id + cell_type)
+pca <- scpComponentAnalysis(modscp, method = "APCA", residuals = FALSE, unmodelled = FALSE)
+colnames(colData(simData))[[1]] <- "cell"
+bySamplePCs <- scpAnnotateResults(
+  pca$bySample, colData(simData), by = "cell"
+)
+
+scpComponentPlot(
+  bySamplePCs,
+  pointParams = list(
+    aes(colour = patient_id, shape = cell_type),
+    alpha = 0.6
+  )
+) |>
+  wrap_plots(guides = "collect")
+
+var <- scpVarianceAnalysis(modscp)
+scpVariancePlot(var)
 
 daSimData <- add_patient_group_shift_SE(simData,
                                         group_a = unique(colData(simData)$patient_id)[1:8],

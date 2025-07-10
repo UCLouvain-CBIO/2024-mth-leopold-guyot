@@ -73,7 +73,7 @@ summary_total <- total_df %>%
               medianMaxPeakRAM = max(maxPeakRAM),
               .groups = "drop")
 
-ggplot(summary_total, aes(x = as.numeric(nCell), y = medianTotalRuntime, color = versionLabel)) +
+perCellTime <- ggplot(summary_total, aes(x = as.numeric(nCell), y = medianTotalRuntime, color = versionLabel)) +
     geom_line(size = 1) +
     geom_point() +
     labs(
@@ -84,6 +84,7 @@ ggplot(summary_total, aes(x = as.numeric(nCell), y = medianTotalRuntime, color =
     theme_minimal() +
     xlim(0, NA)
 
+ggsave("Figs/report/perCellTime.pdf", perCellTime)
 ggplot(summary_total, aes(x = as.numeric(nCell), y = medianMaxPeakRAM, color = versionLabel)) +
     geom_line(size = 1) +
     geom_point() +
