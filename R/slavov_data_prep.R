@@ -19,9 +19,9 @@ coldataJoined <- left_join(coldata, subpepColdata, by = "sc_id")
 rownames(coldataJoined) <- rownames(coldata)
 
 # peptides
-subpep <- pep[, c("modseq", "sc_id", "pep_quant")]
+subpep <- pep[, c("modseq", "sc_id", "quantitation")]
 subpep <- subpep[subpep$sc_id %in% rownames(coldataJoined),]
-widepep <- pivot_wider(subpep, names_from = "sc_id", values_from = "pep_quant")
+widepep <- pivot_wider(subpep, names_from = "sc_id", values_from = "quantitation")
 
 pepse <- readSummarizedExperiment(widepep, quantCols = 2:ncol(widepep), fnames = "modseq")
 coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(pepse), ]
