@@ -13,9 +13,10 @@ get_patient_effect_variance <- function(model) {
 
 simulate_peptide <- function(model_info, metadata_df, synthetic_patient_effects = NULL) {
     coefs <- model_info$coefficients[, "Estimate"]
-    sigma <- model_info$sigma
-
-    intercept <- coefs["(Intercept)"]
+    #sigma <- model_info$sigma
+    sigma <- 0.1
+    #intercept <- coefs["(Intercept)"]
+    intercept <- 0
     predicted <- rep(intercept, nrow(metadata_df))
 
     predicted <- predicted + sapply(metadata_df$cell_type, function(ct) {
@@ -24,14 +25,7 @@ simulate_peptide <- function(model_info, metadata_df, synthetic_patient_effects 
     })
 
     predicted <- predicted + sapply(metadata_df$patient_id, function(pid) {
-        coef_name <- paste0("patient_id", pid)
-        if (coef_name %in% names(coefs)) {
-            coefs[coef_name]
-        } else if (!is.null(synthetic_patient_effects) && pid %in% names(synthetic_patient_effects)) {
-            synthetic_patient_effects[[pid]]
-        } else {
-            0
-        }
+        synthetic_patient_effects[[pid]]
     })
 
     intensity <- rnorm(nrow(metadata_df), mean = predicted, sd = sigma)

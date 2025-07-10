@@ -2,6 +2,7 @@ library(tidyverse)
 library(QFeatures)
 library(parallel)
 library(lme4)
+library(limma)
 
 pep <- read.csv("/mnt/disk3/slavov_data/scope_pep-001.csv")
 prot <- read.csv("/mnt/disk3/slavov_data/scope_prot_max.csv")
@@ -27,6 +28,10 @@ pepse <- readSummarizedExperiment(widepep, quantCols = 2:ncol(widepep), fnames =
 coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(pepse), ]
 colData(pepse) <- as(coldataJoined, "DataFrame")
 pepse <- logTransform(pepse)
+pepse <- normalize(pepse, method = "center.median")
+pepse <- pepse[, colData(pepse)$day =="d0"]
+pepse <- pepse[, colData(pepse)$cell_type_lowerres %in% c("CD4T", "CD8T", "monocyte", "NK")]
+
 
 # proteins
 
@@ -39,17 +44,35 @@ coldataJoined <- coldataJoined[coldataJoined$sc_id %in% colnames(protse), ]
 colData(protse) <- as(coldataJoined, "DataFrame")
 protse <- logTransform(protse)
 
+# Explore with scplainer
+# 
+# modscp <- scpModelWorkflow(pepse, formula = ~ patient_id + cell_type_lowerres)
+# pca <- scpComponentAnalysis(modscp, method = "APCA", residuals = FALSE, unmodelled = FALSE)
+# colData(pepse)$cell <- colData(pepse)$sc_id
+# bySamplePCs <- scpAnnotateResults(
+#   pca$bySample, colData(pepse), by = "cell"
+# )
+# 
+# scpComponentPlot(
+#   bySamplePCs,
+#   pointParams = list(
+#     aes(colour = patient_id, shape = cell_type_lowerres),
+#     alpha = 0.6
+#   )
+# ) |>
+#   wrap_plots(guides = "collect")
+# 
+# var <- scpVarianceAnalysis(modscp)
+# scpVariancePlot(var)
 # model peptides
 
-longpep <- longForm(pepse, colvars = c("sc_id", "cell_type_lowerres", "patient_id", "raw.file", "day"))
-longpepD0 <- longpep[longpep$day == "d0", ]
-longpepD0 <- longpepD0[longpepD0$cell_type_lowerres %in% c("CD4T", "CD8T", "monocyte", "NK"),]
+longpep <- longForm(pepse, colvars = c("sc_id", "cell_type_lowerres", "patient_id", "raw.file", "day", "plate", "lc_batch"))
 
-splitpep <- split(longpepD0, longpepD0$rowname)
+splitpep <- split(longpep, longpep$rowname)
 
 modelList <- mclapply(splitpep, FUN = function(pep) {
   tryCatch({
-    mod <- lmer(formula = value ~ cell_type_lowerres + patient_id + (1 | raw.file), as.data.frame(pep))
+    mod <- lmer(formula = value ~ cell_type_lowerres + patient_id + (1 | plate) + (1| lc_batch) + (1 | raw.file), as.data.frame(pep))
     list("coefficients" = summary(mod)$coefficients, "sigma" = summary(mod)$sigma)  
   },
            error = function(e) NA)

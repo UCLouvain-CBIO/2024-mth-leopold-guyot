@@ -2,6 +2,7 @@ library(msqrob2)
 library(scp)
 library(iCOBRA)
 source("R/multipatient_simulation.R")
+library(patchwork)
 
 compute_performance <- function(modRes, rowdata) {
   df <- data.frame()
@@ -90,7 +91,7 @@ coefdf %>%
 
 simData <- simulate_peptide_data(
   mod,
-  n_cells_per_comb = 25,
+  n_cells_per_comb = 50,
   cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
   n_synthetic_patients = 16
 )
@@ -119,7 +120,7 @@ scpVariancePlot(var)
 daSimData <- add_patient_group_shift_SE(simData,
                                         group_a = unique(colData(simData)$patient_id)[1:8],
                                         group_b = unique(colData(simData)$patient_id)[9:16],
-                                        shift = 0.8,
+                                        shift = 3,
                                         sd = 0.2,
                                         ratio = 0.1,
                                         seed = 123)
