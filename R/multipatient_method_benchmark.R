@@ -88,12 +88,13 @@ coefdf %>%
 
 
 ## Simulate data
+nPatient <- 8
 
 simData <- simulate_peptide_data(
   mod,
-  n_cells_per_comb = 50,
+  n_cells_per_comb = 25,
   cell_types = c("CT1", "lowerresCD8T", "lowerresmonocyte", "lowerresNK"),
-  n_synthetic_patients = 16
+  n_synthetic_patients = nPatient
 )
 
 rownames(simData) <- rowData(simData)$peptide
@@ -116,11 +117,11 @@ scpComponentPlot(
 
 var <- scpVarianceAnalysis(modscp)
 scpVariancePlot(var)
-
+patientA <- sample.int(nPatient, nPatient/2)
 daSimData <- add_patient_group_shift_SE(simData,
-                                        group_a = unique(colData(simData)$patient_id)[1:8],
-                                        group_b = unique(colData(simData)$patient_id)[9:16],
-                                        shift = 3,
+                                        group_a = unique(colData(simData)$patient_id)[patientA],
+                                        group_b = unique(colData(simData)$patient_id)[-patientA],
+                                        shift = 1.5,
                                         sd = 0.2,
                                         ratio = 0.1,
                                         seed = 123)
