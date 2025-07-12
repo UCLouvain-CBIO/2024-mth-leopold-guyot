@@ -66,13 +66,12 @@ protse <- logTransform(protse)
 # scpVariancePlot(var)
 # model peptides
 
-longpep <- longForm(pepse, colvars = c("sc_id", "cell_type_lowerres", "patient_id", "raw.file", "day", "plate", "lc_batch"))
+longpep <- longForm(pepse, colvars = c("sc_id", "cell_type_lowerres", "patient_id", "raw.file", "day", "plate", "lc_batch", "leiden"))
 
 splitpep <- split(longpep, longpep$rowname)
-
 modelList <- mclapply(splitpep, FUN = function(pep) {
   tryCatch({
-    mod <- lmer(formula = value ~ cell_type_lowerres + patient_id + (1 | plate) + (1| lc_batch) + (1 | raw.file), as.data.frame(pep))
+    mod <- lmer(formula = value ~ cell_type_lowerres + patient_id + (1|leiden), as.data.frame(pep))
     list("coefficients" = summary(mod)$coefficients, "sigma" = summary(mod)$sigma)  
   },
            error = function(e) NA)
