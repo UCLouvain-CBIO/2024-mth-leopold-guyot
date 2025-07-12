@@ -36,7 +36,7 @@ compute_performance <- function(modRes, rowdata) {
                                 binary_truth = "is_da",
                                 aspects = "fdrtpr",
                                 maxsplit = Inf,
-                                thrs = seq(from = 0.0001,  to = 0.2, by = 0.0001)
+                                thrs = c(0.01, 0.05, 0.1)#seq(from = 0.0001,  to = 0.2, by = 0.0001)
   ) %>%
     fdrtpr() %>%
     mutate(thr = as.numeric(sub("thr", "", thr)))
