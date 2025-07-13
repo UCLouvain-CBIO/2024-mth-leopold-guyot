@@ -181,7 +181,6 @@ colnames(simMatrix) <- cellIds
 nPatientShiftProt <- floor(patientEffect * nProt)
 patientShiftProteins <- sample(proteinNames, nPatientShiftProt)
 
-
 ```
 
 ```{r prepColData}
