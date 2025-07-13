@@ -6,6 +6,49 @@ library(iCOBRA)
 library(UpSetR)
 library(tidyverse)
 library(MsCoreUtils)
+library(BiocParallel)
+library(ggplot2)
+
+register(BPPARAM = MulticoreParam(workers = 4))
+
+compute_performance <- function(modRes, rowdata) {
+  df <- data.frame()
+  for (name in names(modRes)) {
+    curr <- data.frame(
+      sid = rownames(modRes[[name]]),
+      pval = modRes[[name]]$pval,
+      adjPval = modRes[[name]]$adjPval,
+      is_da = rowdata[rownames(modRes[[name]]), "TreatmentShiftedProtein"],
+      method = rep(name, nrow(modRes[[name]]))
+    )
+    df <- rbind(df, curr)
+  }
+  rownames(df) <- NULL
+  truth_df <- df %>%
+    select(sid, is_da) %>%
+    distinct() %>%
+    column_to_rownames("sid")
+  
+  adjPval_df <- df %>%
+    select(sid, method, adjPval) %>%
+    pivot_wider(names_from = method, values_from = adjPval) %>%
+    column_to_rownames("sid")
+  
+  cobdata <- COBRAData(
+    padj = as.data.frame(adjPval_df),
+    truth = as.data.frame(truth_df)
+  )
+  
+  perf <- calculate_performance(cobdata,
+                                binary_truth = "is_da",
+                                aspects = "fdrtpr",
+                                maxsplit = Inf,
+                                thrs = c(0.01, 0.05, 0.1)#seq(from = 0.0001,  to = 0.2, by = 0.0001)
+  ) %>%
+    fdrtpr() %>%
+    mutate(thr = as.numeric(sub("thr", "", thr)))
+  return(perf)
+}
 
 
 simulateCellPatientData <- function(expMetrics, rowdata,
@@ -131,6 +174,8 @@ addTreatmentEffect <- function(sce, expMetrics,
   # Save treated/untreated status in colData
   colData(sce)$Treatment <- ifelse(colData(sce)$Patient %in% treatedPatients,
                                    "Treated", "Control")
+  # Add logical column for shifted proteins
+  rowData(sce)$TreatmentShiftedProtein <- rownames(sce) %in% treatmentShiftProteins
   
   assay(sce) <- assayMatrix
   
@@ -138,10 +183,19 @@ addTreatmentEffect <- function(sce, expMetrics,
 }
 
 customRobustSummary <- function(x, ...) {
-  apply(x, 1, function(row) MASS::rlm(row ~ 1, ...)$coefficients[1])
+  # For each feature (row), estimate robust mean
+  res <- apply(x, 1, function(row) {
+    if (all(is.na(row))) return(NA_real_)
+    fit <- MASS::rlm(row ~ 1, ...)
+    coef(fit)[1]
+  })
+  
+  names(res) <- rownames(x)
+  res
 }
 
-aggregate_se <- function(se, group_by_cols, fun = mean) {
+
+aggregate_se <- function(se, group_by_cols, fun = mean, robustSummary = FALSE) {
   if (!all(group_by_cols %in% colnames(colData(se)))) {
     stop("Some specified group_by_cols do not exist in colData.")
   }
@@ -155,7 +209,11 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
   aggregated_assay <- do.call(cbind, lapply(levels_group,
                                             function(g) {
                                               idx <- grouped_indices[[g]]
-                                              apply(assay_matrix[, idx, drop = FALSE], 1, fun, na.rm = TRUE)
+                                              if (robustSummary) {
+                                                customRobustSummary(assay_matrix[, idx, drop = FALSE])
+                                              } else {
+                                                apply(assay_matrix[, idx, drop = FALSE], 1, fun, na.rm = TRUE)
+                                              }
                                             }))
   new_colData <- colData(se) %>%
     as.data.frame() %>%
@@ -172,6 +230,61 @@ aggregate_se <- function(se, group_by_cols, fun = mean) {
 }
 
 
+benchmarkMethods <- function(expMetrics, rowdata,
+                             nPatient, nPopulation,  nCellPatPop,
+                             patientEffect, patientShift, patientSD,
+                             populationEffect, populationShift, populationSD,
+                             treatmentEffect, treatmentShift, treatmentSD,
+                             seed = NULL) {
+  
+  simSCE <- simulateCellPatientData(expMetrics = protMetrics, rowdata = rowdata,
+                          nPatient = nPatient, nPopulation = nPopulation,  nCellPatPop = nCellPatPop,
+                          patientEffect = patientEffect, patientShift = patientShift, patientSD = patientSD,
+                          populationEffect = populationEffect, populationShift = populationShift, populationSD = populationSD,
+                          seed = seed)
+  
+  simSCE <- addTreatmentEffect(simSCE, expMetrics = protMetrics,
+                               treatmentEffect = treatmentEffect, treatmentShift = treatmentShift, treatmentSD = treatmentSD, seed = seed)
+
+  aggMean <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = mean)
+  aggMedian <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = median)
+  aggSum <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = sum)
+  aggRobust <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = NULL, robustSummary = TRUE)
+
+  scpModel <- scpModelWorkflow(simSCE, formula = ~ 1 + CellType + Treatment, verbose = FALSE)
+  scpRes <- scpDifferentialAnalysis(
+    scpModel,
+    contrasts = list(c("Treatment", "Control", "Treated"))
+  )[[1]]
+  
+  colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
+  rownames(scpRes) <- scpRes$feature
+  
+  L <- makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))
+  msqModel <- suppressMessages(suppressWarnings(msqrob(simSCE, formula = ~ CellType + Treatment + (1 | Patient))))
+  msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$TreatmentTreated
+  
+  aggMeanMod <- suppressWarnings(msqrob(aggMean, ~ 1 + Treatment + CellType))
+  aggMeanRes <- rowData(hypothesisTest(object = aggMeanMod, contrast = L))$TreatmentTreated
+  
+  aggMedianMod <- suppressWarnings(msqrob(aggMedian, ~ 1 + Treatment + CellType))
+  aggMedianRes <- rowData(hypothesisTest(object = aggMedianMod, contrast = L))$TreatmentTreated
+  
+  aggSumMod <- suppressWarnings(msqrob(aggSum, ~ 1 + Treatment + CellType))
+  aggSumRes <- rowData(hypothesisTest(object = aggSumMod, contrast = L))$TreatmentTreated
+  
+  aggRobustMod <- suppressWarnings(msqrob(aggRobust, ~ 1 + Treatment + CellType))
+  aggRobustRes <- rowData(hypothesisTest(object = aggRobustMod, contrast = L))$TreatmentTreated
+  
+  fdrtpr <- compute_performance(list("scp" = scpRes,
+                                     "msqrob2" = msqRes,
+                                     "pseudobulkMean" = aggMeanRes,
+                                     "pseudobulkMedian" = aggMedianRes,
+                                     "pseudobulkSum" = aggSumRes,
+                                     "pseudobulkRobustSummary" = aggRobustRes
+                                     ), rowdata = rowData(simSCE))
+  
+}
 
 base <- scpdata::brunner2022()
 sce <- getWithColData(base, "proteins")
@@ -194,11 +307,19 @@ protMetrics <- data.frame(
   stringsAsFactors = FALSE
 )
 
-t <- simulateCellPatientData(protMetrics, rowdata = rowData(sce),
-                             nPatient = 4, nPopulation = 4,  nCellPatPop = 10,
-                             patientEffect = 1, patientShift = 0.3, patientSD = 0.1,
-                             populationEffect = 0.3, populationShift = 0.3, populationSD = 0.1,
-                             seed = 123)
+benchRes <- list()
 
-treat <- addTreatmentEffect(t, expMetrics = protMetrics, treatmentEffect = 0.3, treatmentShift = 0.3, treatmentSD = 0.1
-                   )
+for (nCellPatPop in c(10, 25, 50, 100)) {
+  for (treatmentShift in c(0.1, 0.3, 0.5, 1)) {
+    cat("Starting simulation:", "nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
+    benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <- 
+      benchmarkMethods(protMetrics, rowdata = rowData(sce),
+                     nPatient = 16, nPopulation = 5,  nCellPatPop = nCellPatPop,
+                     patientEffect = 1, patientShift = 0.3, patientSD = 0.1,
+                     populationEffect = 0.3, populationShift = 0.3, populationSD = 0.1,
+                     treatmentEffect = 0.3, treatmentShift = treatmentShift, treatmentSD = treatmentShift/4,
+                     seed = 123)
+  }
+}
+
+saveRDS(benchRes, file = "dataOutput/artificialSimPB/tprfdrRes.rds")
