@@ -309,8 +309,8 @@ protMetrics <- data.frame(
 
 benchRes <- list()
 
-for (nCellPatPop in c(10, 25, 50, 100)) {
-  for (treatmentShift in c(0.1, 0.3, 0.5, 1)) {
+for (nCellPatPop in c(10, 25, 50)) {
+  for (treatmentShift in c(0.1, 0.7)) {
     cat("Starting simulation:", "nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
     benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <- 
       benchmarkMethods(protMetrics, rowdata = rowData(sce),
