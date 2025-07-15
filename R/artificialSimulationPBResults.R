@@ -14,7 +14,7 @@ combined <- do.call(rbind, res)
 ## Per cell per combination
 
 combined %>%
-    filter(introducedShift == "shift0.7") %>%
+    filter(introducedShift == "shift0.3") %>%
     ggplot(aes(x = FDR, y = TPR, color = cellPerComb)) +
     geom_vline(
         xintercept = c(0.01, 0.05, 0.1),
@@ -43,7 +43,7 @@ combined %>%
         legend.position = "bottom"
     )
 
-ggsave("Figs/artiSimPerCell.pdf")
+ggsave("Figs/artiSimPerCell.pdf", width = 7, height = 5)
 
 ## Per shift plot
 combined %>%
@@ -77,4 +77,4 @@ combined %>%
             legend.position = "bottom"
         )
 
-ggsave("Figs/artiSimPerShift.pdf")
+ggsave("Figs/artiSimPerShift.pdf", width = 7, height = 5)

@@ -43,7 +43,7 @@ compute_performance <- function(modRes, rowdata) {
                                 binary_truth = "is_da",
                                 aspects = "fdrtpr",
                                 maxsplit = Inf,
-                                thrs = c(0.01, 0.05, 0.1)#seq(from = 0.0001,  to = 0.2, by = 0.0001)
+                                thrs = seq(from = 0.001,  to = 1, by = 0.001)
   ) %>%
     fdrtpr() %>%
     mutate(thr = as.numeric(sub("thr", "", thr)))
@@ -310,7 +310,7 @@ protMetrics <- data.frame(
 benchRes <- list()
 
 for (nCellPatPop in c(10, 25, 50, 100)) {
-  for (treatmentShift in c(0.1, 0.3, 0.5, 1)) {
+  for (treatmentShift in c(0.025, 0.05, 0.1, 0.2)) {
     cat("Starting simulation:", "nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
     benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <-
       benchmarkMethods(protMetrics, rowdata = rowData(sce),
