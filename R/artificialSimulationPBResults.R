@@ -12,6 +12,9 @@ for (name in names(res)) {
 combined <- do.call(rbind, res)
 
 ## Per cell per combination
+combinedThr01 <- combined %>%
+    filter(thr %in% c(0.05),
+           introducedShift == "shift0.1")
 
 combined %>%
     filter(introducedShift == "shift0.1") %>%
@@ -20,8 +23,9 @@ combined %>%
         xintercept = c(0.01, 0.05, 0.1),
         linetype = "dashed", color = "grey50", linewidth = 0.3
     ) +
-    geom_point(size = 2.5, alpha = 0.8) +
-    geom_line(size = 0.7) +
+    geom_point(size = 0.1, alpha = 0.8) +
+    geom_point(data = combinedThr01, aes(x = FDR, y = TPR, color = cellPerComb), size = 2) +
+    geom_line(size = 0.5) +
     scale_x_continuous(
         trans = "sqrt",
         limits = c(0, 1),
@@ -45,7 +49,13 @@ combined %>%
 
 ggsave("Figs/artiSimPerCell.pdf", width = 7, height = 5)
 
+
 ## Per shift plot
+
+combinedThr50 <- combined %>%
+    filter(thr %in% c(0.05),
+           cellPerComb == "nCell50")
+
 combined %>%
     filter(cellPerComb == "nCell50") %>%
     ggplot(aes(x = FDR, y = TPR, color = method)) +
@@ -53,8 +63,8 @@ combined %>%
             xintercept = c(0.01, 0.05, 0.1),
             linetype = "dashed", color = "grey50", linewidth = 0.3
         ) +
-        geom_point(size = 2.5, alpha = 0.8) +
-        geom_line(size = 0.7) +
+        geom_point(size = 0.1, alpha = 0.8) +
+        geom_line(size = 0.5) +
         scale_x_continuous(
             trans = "sqrt",
             limits = c(0, 1),

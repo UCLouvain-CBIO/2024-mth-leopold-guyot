@@ -264,16 +264,16 @@ benchmarkMethods <- function(expMetrics, rowdata,
   msqModel <- suppressMessages(suppressWarnings(msqrob(simSCE, formula = ~ CellType + Treatment + (1 | Patient))))
   msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$TreatmentTreated
 
-  aggMeanMod <- suppressWarnings(msqrob(aggMean, ~ 1 + Treatment + CellType + (1 | Patient)))
+  aggMeanMod <- suppressWarnings(msqrob(aggMean, ~ 1 + Treatment + CellType))
   aggMeanRes <- rowData(hypothesisTest(object = aggMeanMod, contrast = L))$TreatmentTreated
 
-  aggMedianMod <- suppressWarnings(msqrob(aggMedian, ~ 1 + Treatment + CellType + (1 | Patient)))
+  aggMedianMod <- suppressWarnings(msqrob(aggMedian, ~ 1 + Treatment + CellType))
   aggMedianRes <- rowData(hypothesisTest(object = aggMedianMod, contrast = L))$TreatmentTreated
 
-  aggSumMod <- suppressWarnings(msqrob(aggSum, ~ 1 + Treatment + CellType + (1 | Patient)))
+  aggSumMod <- suppressWarnings(msqrob(aggSum, ~ 1 + Treatment + CellType))
   aggSumRes <- rowData(hypothesisTest(object = aggSumMod, contrast = L))$TreatmentTreated
 
-  aggRobustMod <- suppressWarnings(msqrob(aggRobust, ~ 1 + Treatment + CellType + (1 | Patient)))
+  aggRobustMod <- suppressWarnings(msqrob(aggRobust, ~ 1 + Treatment + CellType))
   aggRobustRes <- rowData(hypothesisTest(object = aggRobustMod, contrast = L))$TreatmentTreated
 
   fdrtpr <- compute_performance(list("scp" = scpRes,
@@ -310,7 +310,7 @@ protMetrics <- data.frame(
 benchRes <- list()
 
 for (nCellPatPop in c(10, 25, 50, 100)) {
-  for (treatmentShift in c(0.025, 0.05, 0.1, 0.2)) {
+  for (treatmentShift in c(0.05, 0.1, 0.15, 0.2)) {
     cat("Starting simulation:", "nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
     benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <-
       benchmarkMethods(protMetrics, rowdata = rowData(sce),

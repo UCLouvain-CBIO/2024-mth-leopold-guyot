@@ -142,3 +142,11 @@ combined_labeled %>%
     ungroup() %>%
     group_by(versionLabel) %>%
     summarise(medianRuntime = sum(medianRuntime))
+
+combined_labeled %>%
+    filter(nCell == 4000) %>%
+    group_by(versionLabel, Function_Call) %>%
+    summarise(medianRAM = median(Total_RAM_Used_MiB)) %>%
+    ungroup() %>%
+    group_by(versionLabel) %>%
+    summarise(ram = sum(medianRAM))
