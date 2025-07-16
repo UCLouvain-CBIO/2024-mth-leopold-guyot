@@ -167,7 +167,6 @@ plotRatioComplete <- benchmarkDF %>%
     geom_bar(position = "dodge", stat = "identity") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# Your desired mapping
 rename_map <- c(
     "AggPSM" = "aggregatePSM",
     "SCR" = "filterSCR",
@@ -593,3 +592,113 @@ sizeComponentDiff %>%
     scale_fill_gradient2(
         low = "blue", mid = "white", high = "red",
         midpoint = 0)
+
+
+## SubsetByColData opti
+
+subcoldata <- read.csv("dataOutput/benchmark_subsetByColData_opti.csv") %>%
+    mutate(nCell = nAssays*18,
+           mem_MiB = mem_alloc * 1e-5)
+
+plotTime <- subcoldata %>%
+    filter(expression == "bracket") %>%
+    ggplot(aes(x = nCell, y = median_time, color = version)) +
+    geom_boxplot(
+        aes(group = interaction(nCell, version), color = version),
+        alpha = 0.7,
+        position = position_dodge(width = 1),
+        size = 0.8,
+        width = 200
+    ) +
+    geom_smooth(
+        aes(color = version)
+    ) + theme_minimal() +
+    theme(
+        legend.position = "none"
+    )
+
+ggsave("Figs/report/subcoldataTime.pdf", plot = plotTime, width = 10, height = 5)
+
+plotMem <- subcoldata %>%
+    filter(expression == "bracket") %>%
+    ggplot(aes(x = nCell, y = mem_MiB, color = version)) +
+    geom_boxplot(
+        aes(group = interaction(nCell, version), color = version),
+        alpha = 0.7,
+        position = position_dodge(width = 1),
+        size = 0.8,
+        width = 200
+    ) +
+    geom_smooth(
+        aes(color = version)
+    ) + theme_minimal() +
+    theme(
+        legend.position = "bottom",
+        legend.box = "horizontal",       # Arrange legends horizontally (default)
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    )
+
+ggsave("Figs/report/subcoldataMem.pdf", plot = plotMem, width = 10, height = 5)
+
+
+## Aggregation optimisation
+
+allOpti <- read.csv(file = "dataOutput/optimisationsBench/noSubsetRowDataSCE.csv")
+
+allOpti %>%
+    filter(Function_Call == "aggregatePSM(leduc)",
+           version %in% c("aggregation", "base")) %>%
+    ggplot(aes(x = subset_size, y = Elapsed_Time_sec, color = version)) +
+    geom_boxplot(
+        aes(group = interaction(subset_size, version), color = version),
+        alpha = 0.7,
+        position = position_dodge(width = 1),
+        size = 0.8,
+        width = 200
+    ) +
+    geom_smooth(
+        method = "lm"
+    ) +
+    stat_poly_eq(
+        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"), group = version, color = version),
+        formula = y ~ x,
+        parse = TRUE
+    ) +
+    theme_minimal() +
+    theme(
+        legend.position = "none"
+    )
+
+ggsave(filename = "Figs/report/aggOptiTime.pdf", width = 10, height = 4.5)
+
+allOpti %>%
+    filter(Function_Call == "aggregatePSM(leduc)",
+           version %in% c("aggregation", "base")) %>%
+    ggplot(aes(x = subset_size, y = Total_RAM_Used_MiB, color = version)) +
+    geom_boxplot(
+        aes(group = interaction(subset_size, version), color = version),
+        alpha = 0.7,
+        position = position_dodge(width = 1),
+        size = 0.8,
+        width = 200
+    ) +
+    geom_smooth(
+        aes(color = version),
+        method = "lm"
+    ) +
+    stat_poly_eq(
+        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"), group = version, color = version),
+        formula = y ~ x,
+        parse = TRUE
+    ) +
+    theme_minimal() +
+    theme(
+        legend.position = "bottom",
+        legend.box = "horizontal",       # Arrange legends horizontally (default)
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    )
+
+ggsave(filename = "Figs/report/aggOptiMem.pdf", width = 10, height = 5)
+

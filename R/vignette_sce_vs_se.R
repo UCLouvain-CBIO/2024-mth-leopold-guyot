@@ -73,11 +73,11 @@ perct <- benchRes %>%
     group_by(Function_Call, type) %>%
     summarize(median_time_sec = median(Elapsed_Time_sec), .groups = "drop") %>%
     pivot_wider(names_from = type, values_from = median_time_sec) %>%
-    mutate(percentage_diff = ((sce - se) / se) * 100) %>%
+    mutate(percentage_diff = ((se - sce) / sce) * 100) %>%
     ggplot(aes(x = Function_Call, y = percentage_diff)) +
     geom_col() +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-    ylab("Increase in % when using sce")
+    ylab("Median decrease in % when using SE") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 time <- time + theme(axis.title.x = element_blank(),
                      axis.text.x = element_blank(),
@@ -85,6 +85,6 @@ time <- time + theme(axis.title.x = element_blank(),
 combined_plot <- (time / perct) +
     plot_layout(guides = "collect") &
     theme(legend.position = "right")
-ggsave("Figs/SCEvsSE_vignette.png", combined_plot,
+ggsave("Figs/SCEvsSE_vignette.pdf", combined_plot,
        height = 10,
        width = 15)

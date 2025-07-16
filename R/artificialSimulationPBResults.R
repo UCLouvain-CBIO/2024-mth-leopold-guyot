@@ -14,7 +14,7 @@ combined <- do.call(rbind, res)
 ## Per cell per combination
 
 combined %>%
-    filter(introducedShift == "shift0.3") %>%
+    filter(introducedShift == "shift0.1") %>%
     ggplot(aes(x = FDR, y = TPR, color = cellPerComb)) +
     geom_vline(
         xintercept = c(0.01, 0.05, 0.1),

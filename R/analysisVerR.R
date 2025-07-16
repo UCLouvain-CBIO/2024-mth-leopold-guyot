@@ -115,20 +115,30 @@ summary_df_peak <- combined_labeled %>%
 time4000 <- ggplot(summary_df_time, aes(x = versionLabel, y = medianRuntime, colour = Function_Call)) +
     geom_col(aes(fill = Function_Call)) +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none")
 
-ggsave("Figs/report/time4000.pdf", time4000)
+ggsave("Figs/report/time4000.pdf", time4000, width = 10, height = 4)
 
 RAM4000 <- ggplot(summary_df_ram, aes(x = versionLabel, y = medianRAM, colour = Function_Call)) +
     geom_col(aes(fill = Function_Call)) +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "bottom")
 
-ggsave("Figs/report/RAM4000.pdf", RAM4000)
+ggsave("Figs/report/RAM4000.pdf", RAM4000, width = 10, height = 5)
 
-peak4000 <- ggplot(summary_df_peak, aes(x = versionLabel, y = maxPeakRAM, colour = versionLabel)) +
+peak4000 <- ggplot(summary_df_peak, aes(x = versionLabel, y = maxPeakRAM)) +
     geom_col(aes(fill = versionLabel)) +
     theme_minimal()+
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("Figs/report/peak4000.pdf", peak4000)
+ggsave("Figs/report/peak4000.pdf", peak4000, width = 10, height = 5)
+
+combined_labeled %>%
+    filter(nCell == 4000) %>%
+    group_by(versionLabel, Function_Call) %>%
+    summarise(medianRuntime = median(Elapsed_Time_sec)) %>%
+    ungroup() %>%
+    group_by(versionLabel) %>%
+    summarise(medianRuntime = sum(medianRuntime))
