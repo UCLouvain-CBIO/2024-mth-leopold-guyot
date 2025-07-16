@@ -237,107 +237,53 @@ benchmarkMethods <- function(expMetrics, rowdata,
                              treatmentEffect, treatmentShift, treatmentSD,
                              seed = NULL) {
 
-  timings <- list()
+  simSCE <- simulateCellPatientData(expMetrics = protMetrics, rowdata = rowdata,
+                          nPatient = nPatient, nPopulation = nPopulation,  nCellPatPop = nCellPatPop,
+                          patientEffect = patientEffect, patientShift = patientShift, patientSD = patientSD,
+                          populationEffect = populationEffect, populationShift = populationShift, populationSD = populationSD,
+                          seed = seed)
 
-  start <- Sys.time()
-  simSCE <- simulateCellPatientData(
-    expMetrics = protMetrics, rowdata = rowdata,
-    nPatient = nPatient, nPopulation = nPopulation,  nCellPatPop = nCellPatPop,
-    patientEffect = patientEffect, patientShift = patientShift, patientSD = patientSD,
-    populationEffect = populationEffect, populationShift = populationShift, populationSD = populationSD,
-    seed = seed
-  )
-  end <- Sys.time()
-  timings$simulateCellPatientData <- as.numeric(difftime(end, start, units = "secs"))
+  simSCE <- addTreatmentEffect(simSCE, expMetrics = protMetrics,
+                               treatmentEffect = treatmentEffect, treatmentShift = treatmentShift, treatmentSD = treatmentSD, seed = seed)
 
-  start <- Sys.time()
-  simSCE <- addTreatmentEffect(
-    simSCE, expMetrics = protMetrics,
-    treatmentEffect = treatmentEffect, treatmentShift = treatmentShift, treatmentSD = treatmentSD, seed = seed
-  )
-  end <- Sys.time()
-  timings$addTreatmentEffect <- as.numeric(difftime(end, start, units = "secs"))
-
-  # Pseudobulk aggregations
-  start <- Sys.time()
   aggMean <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = mean)
-  end <- Sys.time()
-  timings$aggMean <- as.numeric(difftime(end, start, units = "secs"))
-
-  start <- Sys.time()
   aggMedian <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = median)
-  end <- Sys.time()
-  timings$aggMedian <- as.numeric(difftime(end, start, units = "secs"))
-
-  start <- Sys.time()
   aggSum <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = sum)
-  end <- Sys.time()
-  timings$aggSum <- as.numeric(difftime(end, start, units = "secs"))
-
-  start <- Sys.time()
   aggRobust <- aggregate_se(simSCE, group_by_cols = c("CellType", "Patient", "Treatment"), fun = NULL, robustSummary = TRUE)
-  end <- Sys.time()
-  timings$aggRobust <- as.numeric(difftime(end, start, units = "secs"))
 
-  # scp
-  start <- Sys.time()
   scpModel <- scpModelWorkflow(simSCE, formula = ~ 1 + CellType + Treatment, verbose = FALSE)
   scpRes <- scpDifferentialAnalysis(
     scpModel,
     contrasts = list(c("Treatment", "Control", "Treated"))
   )[[1]]
-  end <- Sys.time()
-  timings$scp <- as.numeric(difftime(end, start, units = "secs"))
 
-  # msqrob2
-  start <- Sys.time()
+  colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
+  rownames(scpRes) <- scpRes$feature
+
+  L <- makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))
   msqModel <- suppressMessages(suppressWarnings(msqrob(simSCE, formula = ~ CellType + Treatment + (1 | Patient))))
-  msqRes <- rowData(hypothesisTest(object = msqModel, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
-  end <- Sys.time()
-  timings$msqrob2 <- as.numeric(difftime(end, start, units = "secs"))
+  msqRes <- rowData(hypothesisTest(object = msqModel, contrast = L))$TreatmentTreated
 
-  # Pseudobulk Mean
-  start <- Sys.time()
   aggMeanMod <- suppressWarnings(msqrob(aggMean, ~ 1 + Treatment + CellType))
-  aggMeanRes <- rowData(hypothesisTest(object = aggMeanMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
-  end <- Sys.time()
-  timings$pseudobulkMean <- as.numeric(difftime(end, start, units = "secs"))
+  aggMeanRes <- rowData(hypothesisTest(object = aggMeanMod, contrast = L))$TreatmentTreated
 
-  # Pseudobulk Median
-  start <- Sys.time()
   aggMedianMod <- suppressWarnings(msqrob(aggMedian, ~ 1 + Treatment + CellType))
-  aggMedianRes <- rowData(hypothesisTest(object = aggMedianMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
-  end <- Sys.time()
-  timings$pseudobulkMedian <- as.numeric(difftime(end, start, units = "secs"))
+  aggMedianRes <- rowData(hypothesisTest(object = aggMedianMod, contrast = L))$TreatmentTreated
 
-  # Pseudobulk Sum
-  start <- Sys.time()
   aggSumMod <- suppressWarnings(msqrob(aggSum, ~ 1 + Treatment + CellType))
-  aggSumRes <- rowData(hypothesisTest(object = aggSumMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
-  end <- Sys.time()
-  timings$pseudobulkSum <- as.numeric(difftime(end, start, units = "secs"))
+  aggSumRes <- rowData(hypothesisTest(object = aggSumMod, contrast = L))$TreatmentTreated
 
-  # Pseudobulk Robust Summary
-  start <- Sys.time()
   aggRobustMod <- suppressWarnings(msqrob(aggRobust, ~ 1 + Treatment + CellType))
-  aggRobustRes <- rowData(hypothesisTest(object = aggRobustMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
-  end <- Sys.time()
-  timings$pseudobulkRobustSummary <- as.numeric(difftime(end, start, units = "secs"))
+  aggRobustRes <- rowData(hypothesisTest(object = aggRobustMod, contrast = L))$TreatmentTreated
 
-  # Calculate performance
-  start <- Sys.time()
-  fdrtpr <- compute_performance(list(
-    "scp" = scpRes,
-    "msqrob2" = msqRes,
-    "pseudobulkMean" = aggMeanRes,
-    "pseudobulkMedian" = aggMedianRes,
-    "pseudobulkSum" = aggSumRes,
-    "pseudobulkRobustSummary" = aggRobustRes
-  ), rowdata = rowData(simSCE))
-  end <- Sys.time()
-  timings$compute_performance <- as.numeric(difftime(end, start, units = "secs"))
+  fdrtpr <- compute_performance(list("scp" = scpRes,
+                                     "msqrob2" = msqRes,
+                                     "pseudobulkMean" = aggMeanRes,
+                                     "pseudobulkMedian" = aggMedianRes,
+                                     "pseudobulkSum" = aggSumRes,
+                                     "pseudobulkRobustSummary" = aggRobustRes
+                                     ), rowdata = rowData(simSCE))
 
-  return(list(performance = fdrtpr, timings = timings))
 }
 
 base <- scpdata::brunner2022()

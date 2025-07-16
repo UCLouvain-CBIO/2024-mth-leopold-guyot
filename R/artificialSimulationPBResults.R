@@ -63,6 +63,8 @@ combined %>%
             xintercept = c(0.01, 0.05, 0.1),
             linetype = "dashed", color = "grey50", linewidth = 0.3
         ) +
+        geom_point(data = combinedThr50, aes(x = FDR, y = TPR, color = method), size = 2) +
+
         geom_point(size = 0.1, alpha = 0.8) +
         geom_line(size = 0.5) +
         scale_x_continuous(
