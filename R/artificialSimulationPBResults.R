@@ -1,15 +1,14 @@
 library(tidyverse)
 
 res <- readRDS("dataOutput/artificialSimPB/tprfdrRes.rds")
-
 for (name in names(res)) {
     splited <- str_split_1(name, "_")
-    res[[name]]$parameters <- name
-    res[[name]]$cellPerComb <- splited[[1]]
-    res[[name]]$introducedShift <- splited[[2]]
+    res[[name]]$performance$parameters <- name
+    res[[name]]$performance$cellPerComb <- splited[[1]]
+    res[[name]]$performance$introducedShift <- splited[[2]]
 }
 
-combined <- do.call(rbind, res)
+combined <- do.call(rbind, lapply(res, function(x) x$performance))
 
 ## Per cell per combination
 combinedThr01 <- combined %>%

@@ -300,28 +300,28 @@ benchmarkMethods <- function(expMetrics, rowdata,
 
   # Pseudobulk Mean
   start <- Sys.time()
-  aggMeanMod <- suppressWarnings(msqrob(aggMean, ~ 1 + Treatment + CellType))
+  aggMeanMod <- suppressWarnings(msqrob(aggMean, ~ 1 + Treatment + CellType + (1|Patient)))
   aggMeanRes <- rowData(hypothesisTest(object = aggMeanMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
   end <- Sys.time()
   timings$pseudobulkMean <- as.numeric(difftime(end, start, units = "secs"))
 
   # Pseudobulk Median
   start <- Sys.time()
-  aggMedianMod <- suppressWarnings(msqrob(aggMedian, ~ 1 + Treatment + CellType))
+  aggMedianMod <- suppressWarnings(msqrob(aggMedian, ~ 1 + Treatment + CellType + (1|Patient)))
   aggMedianRes <- rowData(hypothesisTest(object = aggMedianMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
   end <- Sys.time()
   timings$pseudobulkMedian <- as.numeric(difftime(end, start, units = "secs"))
 
   # Pseudobulk Sum
   start <- Sys.time()
-  aggSumMod <- suppressWarnings(msqrob(aggSum, ~ 1 + Treatment + CellType))
+  aggSumMod <- suppressWarnings(msqrob(aggSum, ~ 1 + Treatment + CellType + (1|Patient)))
   aggSumRes <- rowData(hypothesisTest(object = aggSumMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
   end <- Sys.time()
   timings$pseudobulkSum <- as.numeric(difftime(end, start, units = "secs"))
 
   # Pseudobulk Robust Summary
   start <- Sys.time()
-  aggRobustMod <- suppressWarnings(msqrob(aggRobust, ~ 1 + Treatment + CellType))
+  aggRobustMod <- suppressWarnings(msqrob(aggRobust, ~ 1 + Treatment + CellType + (1|Patient)))
   aggRobustRes <- rowData(hypothesisTest(object = aggRobustMod, contrast = makeContrast("TreatmentTreated=0", parameterNames = c("TreatmentTreated"))))$TreatmentTreated
   end <- Sys.time()
   timings$pseudobulkRobustSummary <- as.numeric(difftime(end, start, units = "secs"))
@@ -367,7 +367,7 @@ if (sys.nframe() == 0){
   benchRes <- list()
 
 for (nCellPatPop in c(10, 25, 50, 100)) {
-  for (treatmentShift in c(0.05, 0.1, 0.15, 0.2)) {
+  for (treatmentShift in c(0.05, 0,75, 0.1, 0.15)) {
     cat("Starting simulation:", "nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
     benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <-
       benchmarkMethods(protMetrics, rowdata = rowData(sce),
