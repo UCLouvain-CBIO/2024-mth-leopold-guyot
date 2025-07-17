@@ -288,6 +288,8 @@ benchmarkMethods <- function(expMetrics, rowdata,
   )[[1]]
   end <- Sys.time()
   timings$scp <- as.numeric(difftime(end, start, units = "secs"))
+  colnames(scpRes) <- c("feature", "logFC", "se", "df", "t", "pval", "adjPval")
+  rownames(scpRes) <- scpRes$feature
 
   # msqrob2
   start <- Sys.time()
@@ -371,7 +373,7 @@ for (nCellPatPop in c(10, 25, 50, 100)) {
                      nPatient = 16, nPopulation = 5,  nCellPatPop = nCellPatPop,
                      patientEffect = 1, patientShift = 0.2, patientSD = 0.05,
                      populationEffect = 0.33, populationShift = 0.4, populationSD = 0.1,
-                     treatmentEffect = 0.33, treatmentShift = treatmentShift, treatmentSD = treatmentShift/4,
+                     treatmentEffect = 0.33, treatmentShift = treatmentShift, treatmentSD = 0,
                      seed = 123)
   }
 }
