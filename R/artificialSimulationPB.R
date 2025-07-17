@@ -241,7 +241,7 @@ benchmarkMethods <- function(expMetrics, rowdata,
 
   start <- Sys.time()
   simSCE <- simulateCellPatientData(
-    expMetrics = protMetrics, rowdata = rowdata,
+    expMetrics = expMetrics, rowdata = rowdata,
     nPatient = nPatient, nPopulation = nPopulation,  nCellPatPop = nCellPatPop,
     patientEffect = patientEffect, patientShift = patientShift, patientSD = patientSD,
     populationEffect = populationEffect, populationShift = populationShift, populationSD = populationSD,
@@ -342,28 +342,29 @@ benchmarkMethods <- function(expMetrics, rowdata,
   return(list(performance = fdrtpr, timings = timings))
 }
 
-base <- scpdata::brunner2022()
-sce <- getWithColData(base, "proteins")
-sce <- sce[, colData(sce)$CellCycleStage == "UB"]
-sce <- logTransform(sce) # log transform to obtain normal intensities distribution
-sce <- sce[rowSums(!is.na(assay(sce))) > 1, ]
-sce
+if (sys.nframe() == 0){
+  base <- scpdata::brunner2022()
+  sce <- getWithColData(base, "proteins")
+  sce <- sce[, colData(sce)$CellCycleStage == "UB"]
+  sce <- logTransform(sce) # log transform to obtain normal intensities distribution
+  sce <- sce[rowSums(!is.na(assay(sce))) > 1, ]
+  sce
 
-protAssay <- as.data.frame(assay(sce))
+  protAssay <- as.data.frame(assay(sce))
 
-# Compute metric
-meanIntensity <- rowMeans(protAssay, na.rm = TRUE)
-sdIntensity <- apply(protAssay, 1, sd, na.rm = TRUE)
-pctMissing <- rowMeans(is.na(protAssay)) * 100
-protMetrics <- data.frame(
-  protNames = rownames(protAssay),
-  meanIntensity = meanIntensity,
-  sdIntensity = sdIntensity,
-  pctMissing = pctMissing,
-  stringsAsFactors = FALSE
-)
+  # Compute metric
+  meanIntensity <- rowMeans(protAssay, na.rm = TRUE)
+  sdIntensity <- apply(protAssay, 1, sd, na.rm = TRUE)
+  pctMissing <- rowMeans(is.na(protAssay)) * 100
+  protMetrics <- data.frame(
+    protNames = rownames(protAssay),
+    meanIntensity = meanIntensity,
+    sdIntensity = sdIntensity,
+    pctMissing = pctMissing,
+    stringsAsFactors = FALSE
+  )
 
-benchRes <- list()
+  benchRes <- list()
 
 for (nCellPatPop in c(10, 25, 50, 100)) {
   for (treatmentShift in c(0.05, 0.1, 0.15, 0.2)) {
@@ -378,4 +379,7 @@ for (nCellPatPop in c(10, 25, 50, 100)) {
   }
 }
 
-saveRDS(benchRes, file = "dataOutput/artificialSimPB/tprfdrRes.rds")
+  saveRDS(benchRes, file = "dataOutput/artificialSimPB/tprfdrRes.rds")
+}
+
+
