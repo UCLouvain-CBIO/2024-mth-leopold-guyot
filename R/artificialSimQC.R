@@ -26,3 +26,6 @@ simSCE <- simulateCellPatientData(protMetrics, rowdata = rowData(sce),
                                   patientEffect = 1, patientShift = 0.2, patientSD = 0.05,
                                   populationEffect = 0.33, populationShift = 0.4, populationSD = 0.1,
                                   seed = 123)
+
+
+scpMod <- scpModelWorkflow(simSCE, formula = ~ 1 + Patient + CellType)
