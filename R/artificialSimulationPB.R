@@ -372,8 +372,8 @@ for (nCellPatPop in c(10, 25, 50, 100)) {
     benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <-
       benchmarkMethods(protMetrics, rowdata = rowData(sce),
                      nPatient = 16, nPopulation = 5,  nCellPatPop = nCellPatPop,
-                     patientEffect = 1, patientShift = 0.2, patientSD = 0.05,
-                     populationEffect = 0.33, populationShift = 0.4, populationSD = 0.1,
+                     patientEffect = 1, patientShift = 0, patientSD = 0.1,
+                     populationEffect = 0.33, populationShift = 0, populationSD = 0.2,
                      treatmentEffect = 0.33, treatmentShift = treatmentShift, treatmentSD = 0,
                      seed = 123)
   }
