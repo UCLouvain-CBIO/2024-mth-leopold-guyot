@@ -19,7 +19,7 @@ ggplot(df, aes(x = Expression)) +
          y = "Density") +
     theme_minimal()
 
-ggsave("Figs/report/brunnerDensity.pdf")
+ggsave("Figs/report/brunnerDensity.pdf", width = 5, height = 10)
 
 
 protAssay <- as.data.frame(assay(sce))
@@ -59,7 +59,7 @@ plotPatient <- scpComponentPlot(
     )
 )
 
-ggsave("Figs/report/simApcaPatient.pdf")
+ggsave("Figs/report/simApcaPatient.pdf", width = 10, height = 6)
 
 plotCell <- scpComponentPlot(
     bySamplePCs[2],
@@ -69,6 +69,6 @@ plotCell <- scpComponentPlot(
     )
 )
 
-ggsave("Figs/report/simApcaCell.pdf")
+ggsave("Figs/report/simApcaCell.pdf", width = 10, height = 6)
 
 
