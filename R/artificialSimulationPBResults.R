@@ -17,10 +17,10 @@ combined <- combined %>%
 ## Per cell per combination
 combinedThr01 <- combined %>%
     filter(thr %in% c(0.05),
-           introducedShift == "shift0.1")
+           introducedShift == "shift0.15")
 
 combined %>%
-    filter(introducedShift == "shift0.1") %>%
+    filter(introducedShift == "shift0.15") %>%
     ggplot(aes(x = FDR, y = TPR, color = cellPerComb)) +
     geom_vline(
         xintercept = c(0.01, 0.05, 0.1),
