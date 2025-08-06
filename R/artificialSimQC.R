@@ -1,6 +1,6 @@
 library(scp)
 library(patchwork)
-
+library(pcaMethods)
 source("R/artificialSimulationPB.R")
 
 base <- scpdata::brunner2022()
@@ -10,12 +10,36 @@ sce <- logTransform(sce) # log transform to obtain normal intensities distributi
 sce <- sce[rowSums(!is.na(assay(sce))) > 1, ]
 sce
 
-all_values <- as.vector(assay(sce))
-df <- data.frame(Expression = all_values)
-ggplot(df, aes(x = Expression)) +
+plot_data <- do.call(rbind, lapply(top_peptides, function(peptide) {
+    values <- assay(sce)[peptide, ]
+    values <- values[!is.na(values)]
+    data.frame(
+        Intensity = values,
+        Peptide = peptide,
+        Mean = mean(values),
+        SD = sd(values)
+    )
+}))
+
+normal_lines <- plot_data %>%
+    group_by(Peptide) %>%
+    summarise(
+        Mean = unique(Mean),
+        SD = unique(SD)
+    ) %>%
+    rowwise() %>%
+    mutate(
+        x = list(seq(Mean - 4*SD, Mean + 4*SD, length.out = 200)),
+        y = list(dnorm(x, mean = Mean, sd = SD))
+    ) %>%
+    tidyr::unnest(cols = c(x, y))
+
+ggplot(plot_data, aes(x = Intensity)) +
     geom_density(fill = "lightblue", alpha = 0.6) +
-    labs(title = "Density Plot of All Log-Intensity Values",
-         x = "Expression",
+    geom_line(data = normal_lines, aes(x = x, y = y), color = "red", linetype = "dashed") +
+    facet_wrap(~Peptide, ncol = 1, scales = "free_y") +
+    labs(title = "Empirical vs. Fitted Normal Distribution (Top 3 Peptides)",
+         x = "Log-Intensity",
          y = "Density") +
     theme_minimal()
 
@@ -42,11 +66,17 @@ simSCE <- simulateCellPatientData(protMetrics, rowdata = rowData(sce),
                                   populationEffect = 0.33, populationShift = 0, populationSD = 0.2,
                                   seed = 123)
 
+pca <- pca(t(assay(simSCE)), method = "nipals")
+df <- merge(scores(pca), colData(simSCE))
+
+ggplot(df, aes(PC1, PC2, color = CellType)) +
+    geom_point(alpha = 0.3) +
+    xlab(paste("PC1", pca@R2[1] * 100, "% of the variance")) +
+    ylab(paste("PC2", pca@R2[2] * 100, "% of the variance"))
 
 scpMod <- scpModelWorkflow(simSCE, formula = ~ 1 + Patient + CellType)
 colData(scpMod)$cell <- rownames(colData(scpMod))
 pcs <- scpComponentAnalysis(scpMod, method = "APCA", residuals = FALSE, unmodelled = FALSE)
-
 bySamplePCs <- scpAnnotateResults(
     pcs$bySample, colData(scpMod), by = "cell"
 )

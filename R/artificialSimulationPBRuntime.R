@@ -19,18 +19,18 @@ combined <- do.call(rbind, runtime) %>%
            pseudobulkMedian = pseudobulkMedian + aggMedian,
            pseudobulkRobustSummary = pseudobulkRobustSummary + aggRobust,
            pseudobulkSum = pseudobulkSum + aggSum) %>%
-    pivot_longer(cols = 4:16, names_to = "model", values_to = "runtime") %>%
+    pivot_longer(cols = 4:16, names_to = "methods", values_to = "runtime") %>%
     mutate(cellPerCombNum = as.numeric(sub("nCell", "", cellPerComb))) %>%
     mutate(nCell = cellPerCombNum * 16 * 5)
 
 
 combined %>%
-    filter(!(model %in% c("simulateCellPatientData", "addTreatmentEffect",
+    filter(!(methods %in% c("simulateCellPatientData", "addTreatmentEffect",
                           "compute_performance",
                           "aggMean", "aggMedian", "aggRobust", "aggSum"))) %>%
-    ggplot(aes(x = nCell, y = runtime, color = model)) +
+    ggplot(aes(x = nCell, y = runtime, color = methods)) +
         geom_boxplot(
-            aes(group = interaction(nCell, model), color = model),
+            aes(group = interaction(nCell, methods), color = methods),
             alpha = 0.7,
             position = position_dodge(width = 1),
             size = 0.8,
@@ -39,7 +39,11 @@ combined %>%
         stat_summary(
             fun = median,
             geom = "line",
-            aes(group = model),
+            aes(group = methods),
             size = 1
         ) +
-        ylim(0, NA)
+        ylim(0, NA)+
+        ylab("Time (s)") +
+        xlab("Number of cells")
+
+ggsave("Figs/report/runtimeSim.pdf")

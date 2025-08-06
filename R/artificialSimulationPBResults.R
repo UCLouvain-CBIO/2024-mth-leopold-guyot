@@ -14,6 +14,17 @@ combined <- combined %>%
     filter(thr %in% c(0.01, 0.05, 0.1)) %>%
     mutate(cellPerComb = factor(cellPerComb, levels = c("nCell10", "nCell25", "nCell50", "nCell100")))
 
+combined_summary <- combined %>%
+    group_by(method, thr, cellPerComb, introducedShift) %>%
+    summarise(
+        TPR_mean = mean(TPR),
+        TPR_sd = sd(TPR),
+        FDR_mean = mean(FDR),
+        FDR_sd = sd(FDR),
+        .groups = "drop"
+    )
+
+
 ## Per cell per combination
 combinedThr01 <- combined %>%
     filter(thr %in% c(0.05),

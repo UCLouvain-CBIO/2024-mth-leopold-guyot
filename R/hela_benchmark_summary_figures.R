@@ -92,16 +92,20 @@ df <- df %>%
             grepl("/helaBenchmark/", Directory) ~ "Vanilla",
             grepl("/helaBenchmark_opti/", Directory) ~ "Optimised",
             TRUE ~ Directory
-        ))
+        )) %>%
+    mutate(Version = factor(Version, levels = c("Vanilla", "Optimised")))
 
 
-# Plot all steps
 stepTime <- ggplot(df, aes(x = Step, y = Elapsed_Time_sec, color = Version)) +
     geom_boxplot() +
+    scale_color_manual(values = c("Vanilla" = "#00BFC4", "Optimised" = "#F8766D")) +
     labs(
-         x = "Operation",
-         y = "Elapsed Time (s)",
-         fill = "Type") +
+        x = "Operation",
+        y = "Time (s)",
+        color = "Type"
+    ) +
     theme_minimal()
+
+
 
 ggsave("Figs/report/HeLa_runtimeSteps.pdf", stepTime, width = 10, height = 5)

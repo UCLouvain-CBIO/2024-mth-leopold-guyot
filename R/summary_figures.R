@@ -538,7 +538,7 @@ p_time_mixed <- ggplot(subsetCombined, aes(x = nCellNum, y = Elapsed_Time_sec)) 
     facet_wrap(~ step, scales = "fixed") +
     ylim(0, NA) +
     xlab("Number of Cells") +
-    ylab("Elapsed Time (seconds)") +
+    ylab("Time (seconds)") +
     theme_minimal() +
     scale_x_continuous(breaks = as.numeric(nCell_order)) +
     theme(
