@@ -210,7 +210,7 @@ aggregate_se <- function(se, group_by_cols, fun = mean, robustSummary = FALSE) {
                                             function(g) {
                                               idx <- grouped_indices[[g]]
                                               if (robustSummary) {
-                                                customRobustSummary(assay_matrix[, idx, drop = FALSE])
+                                                    customRobustSummary(assay_matrix[, idx, drop = FALSE])
                                               } else {
                                                 apply(assay_matrix[, idx, drop = FALSE], 1, fun, na.rm = TRUE)
                                               }
@@ -365,20 +365,20 @@ if (sys.nframe() == 0){
   )
 
   benchRes <- list()
-
-for (nCellPatPop in c(10, 25, 50, 100)) {
-  for (treatmentShift in c(0.1, 0.15, 0.2, 0.25)) {
-    cat("Starting simulation:", "nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
-    benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift)]] <-
-      benchmarkMethods(protMetrics, rowdata = rowData(sce),
-                     nPatient = 16, nPopulation = 5,  nCellPatPop = nCellPatPop,
-                     patientEffect = 1, patientShift = 0, patientSD = 0.1,
-                     populationEffect = 0.33, populationShift = 0, populationSD = 0.2,
-                     treatmentEffect = 0.33, treatmentShift = treatmentShift, treatmentSD = 0,
-                     seed = 123)
-  }
+for (seed in 1:3) {
+    for (nCellPatPop in c(10, 25, 50, 100)) {
+        for (treatmentShift in c(0.1, 0.15, 0.2, 0.25)) {
+            cat("Starting simulation:", "seed = ", seed,", nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
+            benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift, "_seed", seed)]] <-
+            benchmarkMethods(protMetrics, rowdata = rowData(sce),
+                         nPatient = 16, nPopulation = 5,  nCellPatPop = nCellPatPop,
+                         patientEffect = 1, patientShift = 0, patientSD = 0.1,
+                         populationEffect = 0.33, populationShift = 0, populationSD = 0.2,
+                         treatmentEffect = 0.33, treatmentShift = treatmentShift, treatmentSD = 0,
+                        seed = seed)
+        }
+    }
 }
-
   saveRDS(benchRes, file = "dataOutput/artificialSimPB/tprfdrRes.rds")
 }
 
