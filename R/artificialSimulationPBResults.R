@@ -6,6 +6,7 @@ for (name in names(res)) {
     res[[name]]$performance$parameters <- name
     res[[name]]$performance$cellPerComb <- splited[[1]]
     res[[name]]$performance$introducedShift <- splited[[2]]
+    res[[name]]$performance$replicate <- splited[[3]]
 }
 
 combined <- do.call(rbind, lapply(res, function(x) x$performance))
@@ -24,20 +25,17 @@ combined_summary <- combined %>%
         .groups = "drop"
     )
 
-
-## Per cell per combination
-combinedThr01 <- combined %>%
-    filter(thr %in% c(0.05),
-           introducedShift == "shift0.15")
-
-combined %>%
+combined_summary %>%
     filter(introducedShift == "shift0.15") %>%
-    ggplot(aes(x = FDR, y = TPR, color = cellPerComb)) +
+    ggplot(aes(x = FDR_mean, y = TPR_mean, color = cellPerComb)) +
     geom_vline(
         xintercept = c(0.01, 0.05, 0.1),
         linetype = "dashed", color = "grey50", linewidth = 0.3
     ) +
-    geom_point(size = 1, alpha = 0.8) +
+    geom_errorbar(
+        aes(ymin = TPR_mean - TPR_sd, ymax = TPR_mean + TPR_sd),
+        width = 0.01, alpha = 0.5
+    ) +
     geom_line(size = 0.5) +
     scale_x_continuous(
         trans = "sqrt",
@@ -52,7 +50,7 @@ combined %>%
     theme_minimal() +
     labs(
         x = "False Discovery Rate (sqrt scale)",
-        y = "True Positive Rate",
+        y = "True Positive Rate (mean ± sd)",
         color = "Number of Cells per Combination"
     ) + facet_wrap(~method) +
     theme(
@@ -60,44 +58,40 @@ combined %>%
         legend.position = "bottom"
     )
 
-ggsave("Figs/artiSimPerCell.pdf", width = 7, height = 5)
+ggsave("Figs/artiSimPerCell_errorbar.pdf", width = 7, height = 5)
 
 
-## Per shift plot
-
-combinedThr50 <- combined %>%
-    filter(thr %in% c(0.05),
-           cellPerComb == "nCell50")
-
-combined %>%
+combined_summary %>%
     filter(cellPerComb == "nCell50") %>%
-    ggplot(aes(x = FDR, y = TPR, color = method)) +
-        geom_vline(
-            xintercept = c(0.01, 0.05, 0.1),
-            linetype = "dashed", color = "grey50", linewidth = 0.3
-        ) +
-        geom_point(size = 1, alpha = 0.8) +
-        geom_line(size = 0.5) +
-        scale_x_continuous(
-            trans = "sqrt",
-            limits = c(0, 1),
-            breaks = c(0.01, 0.2, 0.6, 1),
-            labels = scales::label_number()
-        ) +
-        scale_y_continuous(
-            limits = c(0, 1),
-            breaks = seq(0, 1, 0.2)
-        ) +
-        theme_minimal() +
-        labs(
-            x = "False Discovery Rate (sqrt scale)",
-            y = "True Positive Rate",
-            color = "Method"
-        ) +
-        facet_wrap(~introducedShift) +
-        theme(
-            panel.border = element_rect(color = "black", fill = NA, size = 0.5),
-            legend.position = "bottom"
-        )
+    ggplot(aes(x = FDR_mean, y = TPR_mean, color = method)) +
+    geom_vline(
+        xintercept = c(0.01, 0.05, 0.1),
+        linetype = "dashed", color = "grey50", linewidth = 0.3
+    ) +
+    geom_errorbar(
+        aes(ymin = TPR_mean - TPR_sd, ymax = TPR_mean + TPR_sd),
+        width = 0.01, alpha = 0.5
+    ) +
+    geom_line(size = 0.5) +
+    scale_x_continuous(
+        trans = "sqrt",
+        limits = c(0, 1),
+        breaks = c(0.01, 0.2, 0.6, 1),
+        labels = scales::label_number()
+    ) +
+    scale_y_continuous(
+        limits = c(0, 1),
+        breaks = seq(0, 1, 0.2)
+    ) +
+    theme_minimal() +
+    labs(
+        x = "False Discovery Rate (sqrt scale)",
+        y = "True Positive Rate (mean ± sd)",
+        color = "Method"
+    ) + facet_wrap(~introducedShift) +
+    theme(
+        panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+        legend.position = "bottom"
+    )
 
-ggsave("Figs/artiSimPerShift.pdf", width = 7, height = 5)
+ggsave("Figs/artiSimPerShift_errorbar.pdf", width = 7, height = 5)
