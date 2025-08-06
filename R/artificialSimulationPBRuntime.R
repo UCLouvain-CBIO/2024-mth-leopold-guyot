@@ -7,7 +7,8 @@ for (name in names(res)) {
     splited <- str_split_1(name, "_")
     runtime[[name]] <- data.frame(parameters = name,
                                   cellPerComb = splited[[1]],
-                                  introducedShift = splited[[2]])
+                                  introducedShift = splited[[2]],
+                                  seed = splited[[3]])
     for (step in names(curr)) {
         runtime[[name]][[step]] <- curr[[step]]
     }
@@ -19,7 +20,7 @@ combined <- do.call(rbind, runtime) %>%
            pseudobulkMedian = pseudobulkMedian + aggMedian,
            pseudobulkRobustSummary = pseudobulkRobustSummary + aggRobust,
            pseudobulkSum = pseudobulkSum + aggSum) %>%
-    pivot_longer(cols = 4:16, names_to = "methods", values_to = "runtime") %>%
+    pivot_longer(cols = 5:17, names_to = "methods", values_to = "runtime") %>%
     mutate(cellPerCombNum = as.numeric(sub("nCell", "", cellPerComb))) %>%
     mutate(nCell = cellPerCombNum * 16 * 5)
 

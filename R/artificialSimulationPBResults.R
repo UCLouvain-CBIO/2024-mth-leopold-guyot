@@ -32,10 +32,7 @@ combined_summary %>%
         xintercept = c(0.01, 0.05, 0.1),
         linetype = "dashed", color = "grey50", linewidth = 0.3
     ) +
-    geom_errorbar(
-        aes(ymin = TPR_mean - TPR_sd, ymax = TPR_mean + TPR_sd),
-        width = 0.01, alpha = 0.5
-    ) +
+    geom_point(size = 1, alpha = 0.8) +
     geom_line(size = 0.5) +
     scale_x_continuous(
         trans = "sqrt",
@@ -50,7 +47,7 @@ combined_summary %>%
     theme_minimal() +
     labs(
         x = "False Discovery Rate (sqrt scale)",
-        y = "True Positive Rate (mean ± sd)",
+        y = "True Positive Rate",
         color = "Number of Cells per Combination"
     ) + facet_wrap(~method) +
     theme(
@@ -68,10 +65,7 @@ combined_summary %>%
         xintercept = c(0.01, 0.05, 0.1),
         linetype = "dashed", color = "grey50", linewidth = 0.3
     ) +
-    geom_errorbar(
-        aes(ymin = TPR_mean - TPR_sd, ymax = TPR_mean + TPR_sd),
-        width = 0.01, alpha = 0.5
-    ) +
+    geom_point(size = 1, alpha = 0.8) +
     geom_line(size = 0.5) +
     scale_x_continuous(
         trans = "sqrt",
@@ -86,12 +80,37 @@ combined_summary %>%
     theme_minimal() +
     labs(
         x = "False Discovery Rate (sqrt scale)",
-        y = "True Positive Rate (mean ± sd)",
+        y = "True Positive Rate",
         color = "Method"
-    ) + facet_wrap(~introducedShift) +
+    ) +
+    facet_wrap(~introducedShift) +
     theme(
         panel.border = element_rect(color = "black", fill = NA, size = 0.5),
         legend.position = "bottom"
     )
 
 ggsave("Figs/artiSimPerShift_errorbar.pdf", width = 7, height = 5)
+
+combined_latex_shift <- combined_summary %>%
+    filter(thr == 0.05,
+           cellPerComb == "nCell50") %>%
+    mutate(
+        TPR = sprintf("%.2f ± %.2f", TPR_mean, TPR_sd),
+        FDR = sprintf("%.2f ± %.2f", FDR_mean, FDR_sd)
+    ) %>%
+    select(method, thr, cellPerComb, introducedShift, TPR, FDR) %>%
+    arrange(introducedShift, thr)
+
+write.csv(x = combined_latex_shift, "dataOutput/artificialSimPB/combined_latex_shift.csv")
+
+combined_latex_cell <- combined_summary %>%
+    filter(thr == 0.05,
+           introducedShift == "shift0.15") %>%
+    mutate(
+        TPR = sprintf("%.2f ± %.2f", TPR_mean, TPR_sd),
+        FDR = sprintf("%.2f ± %.2f", FDR_mean, FDR_sd)
+    ) %>%
+    select(method, thr, cellPerComb, introducedShift, TPR, FDR) %>%
+    arrange(cellPerComb, thr)
+
+write.csv(x = combined_latex, "dataOutput/artificialSimPB/combined_latex_cell.csv")
