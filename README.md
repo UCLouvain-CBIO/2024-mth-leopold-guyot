@@ -1,6 +1,10 @@
+# Relevant PR:
+
+
+
 # Benchmark of QFeatures perfromances
 
-## Vignette Benchmarking
+## Real pipeline benchmark
 
 ### In command line
 
@@ -12,7 +16,7 @@ Run benchmark + generate result report (in reports/leduc2022Results.html)
 ~$ scripts/vignetteBenchmarkScript.R 
 
 ~$ # with parameters
-~$ scripts/vignetteBenchmarkScript.R -cellRange "c(1000, 2000, 4000)" -nReplicates 3
+~$ scripts/vignetteBenchmarkScript.R -cellRange "c(1000, 2000, 4000, 8000, 16000)" -nReplicates 3
 ```
 
 ### In R
@@ -21,7 +25,7 @@ Run benchmark + generate result report (in reports/leduc2022Results.html)
 source(file.path("R", "vignette_benchmark.R"))
 source(file.path("R", "utils.R"))
 
-cellRange <- c(1000, 2000, 4000)
+cellRange <- c(1000, 2000, 4000, 8000, 16000)
 nReplicates <- 3
 
 leduc2022Benchmark(cellRange, nReplicates)
@@ -29,7 +33,7 @@ leduc2022Benchmark(cellRange, nReplicates)
 renderRmarkdown("leduc2022Results.rmd")
 ```
 
-## 4 Variables Benchmark
+## QFeatures object memory usage benchmark
 
 ``` R
 source(file.path("R", "4_variables_benchmark.R"))
@@ -39,7 +43,7 @@ source(file.path("R", "utils.R"))
 renderRmarkdown("4_var_benchmark_results.rmd")
 ```
 
-## Individual Steps Benchmark
+## Individual Components Benchmark
 
 ``` R
 source(file.path("R", "individual_step_benchmark.R"))
@@ -49,20 +53,44 @@ source(file.path("R", "utils.R"))
 renderRmarkdown("individual_step_results.rmd")
 ```
 
-## HeLa Benchmark
+## Challenging dataset Benchmark
 
 ``` R
 source(file.path("R", "hela_to_qfeatures.R"))
 source(file.path("R", "hela_to_qfeatures_opti.R"))
 source(file.path("R", "hela_benchmark.R"))
 
-source(file.path("R", "utils.R"))
+source(file.path("R", "hela_benchmark_analysis.R"))
+```
+## SCE vs SE
 
-# renderRmarkdown("")
+``` R
+source(file.path("R", "vignette_benchmark_SCE_SE.R"))
+```
+## Optimisation summary benchmark
+
+``` R
+source(file.path("R", "setupVerR.R"))
+source(file.path("R", "analysisVerR.R"))
 ```
 
-## Summary Figures
+# Pseudobulking simulation
 
-``` console
-~$ Rscript R/summary_figures.R
+## Quality control
+
+``` R
+source(file.path("R", "artificialSimQC.R"))
+```
+
+## Simulation + model
+
+``` R
+source(file.path("R", "artificialSimulationPB.R"))
+source(file.path("R", "artificialSimulationPBResults.R"))
+source(file.path("R", "artificialSimulationPBRuntime.R"))
+```
+# Report Figures
+
+``` R
+source(file.path("R", "summary_figures.R"))
 ```
