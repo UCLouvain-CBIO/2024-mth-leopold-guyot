@@ -1,5 +1,26 @@
-# Relevant PR:
+# Relevant PRs:
 
+## subsetByColData
+
+https://github.com/waldronlab/MultiAssayExperiment/pull/334
+
+## aggregateFeatures
+
+https://github.com/UCLouvain-CBIO/scp/pull/80
+and
+https://github.com/rformassspectrometry/QFeatures/pull/243
+and
+https://github.com/rformassspectrometry/QFeatures/pull/233
+
+## SE instead of SE
+
+https://github.com/UCLouvain-CBIO/scp/issues/83
+and
+https://github.com/rformassspectrometry/QFeatures/pull/229
+and
+https://github.com/UCLouvain-CBIO/scp/pull/85
+and
+https://github.com/UCLouvain-CBIO/scp/pull/90
 
 
 # Benchmark of QFeatures perfromances
