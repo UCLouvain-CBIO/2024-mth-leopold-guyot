@@ -26,7 +26,8 @@ combined_summary <- combined %>%
     )
 
 combined_summary %>%
-    filter(introducedShift == "shift0.15") %>%
+    filter(introducedShift == "shift0.15",
+           method ==) %>%
     ggplot(aes(x = FDR_mean, y = TPR_mean, color = cellPerComb)) +
     geom_vline(
         xintercept = c(0.01, 0.05, 0.1),
