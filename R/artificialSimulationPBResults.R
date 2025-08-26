@@ -15,6 +15,16 @@ combined <- combined %>%
     filter(thr %in% c(0.01, 0.05, 0.1)) %>%
     mutate(cellPerComb = factor(cellPerComb, levels = c("nCell10", "nCell25", "nCell50", "nCell100")))
 
+subCombined <- combined %>%
+    filter(thr == 0.05,
+           cellPerComb == "nCell50",
+           introducedShift == "shift0.15")
+fdrMod <- lm(formula = FDR ~ method, data = subCombined)
+write.csv(x = summary(fdrMod)$coefficients, "dataOutput/artificialSimPB/modFdr.csv")
+
+tprMod <- lm(formula = TPR ~ method, data = subCombined)
+write.csv(x = summary(tprMod)$coefficients, "dataOutput/artificialSimPB/modTpr.csv")
+
 combined_summary <- combined %>%
     group_by(method, thr, cellPerComb, introducedShift) %>%
     summarise(
