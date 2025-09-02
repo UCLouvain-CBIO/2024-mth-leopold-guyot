@@ -100,7 +100,7 @@ simulateCellPatientData <- function(expMetrics, rowdata,
     for (pat in nPatientNames) {
       shiftVal <- rnorm(1,
                         mean = patientShift,
-                        sd = patientSD)
+                        sd = patientSD * mu[protIdx])
 
       cols <- grep(paste0("^", pat, "_"), colnames(simMatrix))
       simMatrix[protIdx, cols] <- simMatrix[protIdx, cols] + shiftVal
@@ -114,7 +114,7 @@ simulateCellPatientData <- function(expMetrics, rowdata,
     for (pop in nPopulationNames) {
       shiftVal <- rnorm(1,
                         mean = populationShift,
-                        sd = populationSD)
+                        sd = populationSD * mu[protIdx])
 
       cols <- grep(paste0("_", pop, "_"), colnames(simMatrix))
       simMatrix[protIdx, cols] <- simMatrix[protIdx, cols] + shiftVal
@@ -163,7 +163,7 @@ addTreatmentEffect <- function(sce, expMetrics,
     for (pat in treatedPatients) {
       shiftVal <- rnorm(1,
                         mean = treatmentShift,
-                        sd = treatmentSD)
+                        sd = treatmentSD * mu[protIdx])
 
       cols <- which(colData(sce)$Patient == pat)
 
@@ -366,14 +366,14 @@ if (sys.nframe() == 0){
 
   benchRes <- list()
 for (seed in 1:3) {
-    for (nCellPatPop in c(10, 25, 50)) {
-        for (treatmentShift in c(0.5, 1, 2)) {
+    for (nCellPatPop in c(10, 25, 50, 100)) {
+        for (treatmentShift in c(0.5, 0.75, 1, 1.5)) {
             cat("Starting simulation:", "seed = ", seed,", nCell = ", nCellPatPop, ", shift = ", treatmentShift, "\n")
             benchRes[[paste0("nCell", nCellPatPop, "_", "shift", treatmentShift, "_seed", seed)]] <-
             benchmarkMethods(protMetrics, rowdata = rowData(sce),
                          nPatient = 16, nPopulation = 5,  nCellPatPop = nCellPatPop,
-                         patientEffect = 1, patientShift = 0, patientSD = 1,
-                         populationEffect = 0.33, populationShift = 0, populationSD = 2,
+                         patientEffect = 1, patientShift = 0, patientSD = 0.7,
+                         populationEffect = 0.33, populationShift = 1.4, populationSD = 0.2,
                          treatmentEffect = 0.33, treatmentShift = treatmentShift, treatmentSD = 0,
                         seed = seed)
         }
