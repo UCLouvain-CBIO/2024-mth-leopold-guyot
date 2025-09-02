@@ -91,14 +91,14 @@ benchWrapper <- function(replicate, nCell, subsetRowData = FALSE, SE) {
         peptideAssays <- paste0("peptides_", PSMAssays)
         results <- do.call(rbind, lapply(1:replicate, function(i) {
             res <- peakRAM(
-                tmp <- filterRow(leduc),
-                tmp <- filterCol(tmp),
-                tmp <- aggregatePSM(tmp),
-                tmp <- joinAssays(tmp, peptideAssays, "peptides"),
-                tmp <- logTransform(tmp, "peptides", "log_peptides"),
-                tmp <- sweep(tmp, i = "log_peptides", name = "norm_peptides", MARGIN = 1,
+                leduc <- filterRow(leduc),
+                leduc <- filterCol(leduc),
+                leduc <- aggregatePSM(leduc),
+                leduc <- joinAssays(leduc, peptideAssays, "peptides"),
+                leduc <- logTransform(leduc, "peptides", "log_peptides"),
+                leduc <- sweep(leduc, "log_peptides", "norm_peptides", MARGIN = 1,
                                FUN = "-",
-                               STATS = rowMedians(assay(tmp[["log_peptides"]]), na.rm = TRUE))
+                               STATS = rowMedians(assay(leduc[["log_peptides"]]), na.rm = TRUE))
             )
             res$replicate <- i
             res$subset_size <- size
