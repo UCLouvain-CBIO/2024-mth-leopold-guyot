@@ -4,7 +4,6 @@ This repository contains all the code written and used for the Master’s thesis
 
 The thesis document (PDF) is available [here](https://github.com/UCLouvain-CBIO/2024-mth-leopold-guyot/blob/main/master_thesis_leopold_guyot_2025.pdf).
 
-Repo at submission time: [c2c756a51bae20b1c22002a82ea951f316144772](https://github.com/UCLouvain-CBIO/2024-mth-leopold-guyot/tree/c2c756a51bae20b1c22002a82ea951f316144772)
 # Relevant PRs:
 
 ## subsetByColData

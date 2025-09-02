@@ -46,7 +46,7 @@ envCopyTo(file.path("R", "minimumWorkflow.R"),
 
 noSub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 1, nCell = c(4000), subsetRowData = FALSE, SE = FALSE)
+    benchWrapper(replicate = 3, nCell = c(500, 1000, 2000, 4000), subsetRowData = FALSE, SE = FALSE)
 })
 noSub <- bind_rows(noSub, .id = "version")
 
@@ -54,7 +54,7 @@ write.csv(noSub, file = "dataOutput/optimisationsBench/noSubsetRowDataSCE.csv")
 
 sub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 1, nCell = c(4000), subsetRowData = TRUE, SE = FALSE)
+    benchWrapper(replicate = 3, nCell = c(500, 1000, 2000, 4000), subsetRowData = TRUE, SE = FALSE)
 })
 
 sub <- bind_rows(sub, .id = "version")
@@ -63,7 +63,7 @@ write.csv(sub, file = "dataOutput/optimisationsBench/subsetRowDataSCE.csv")
 
 sub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 1, nCell = c(4000), subsetRowData = FALSE, SE = TRUE)
+    benchWrapper(replicate = 3, nCell = c(500, 1000, 2000, 4000), subsetRowData = FALSE, SE = TRUE)
 })
 
 sub <- bind_rows(sub, .id = "version")
@@ -72,7 +72,7 @@ write.csv(sub, file = "dataOutput/optimisationsBench/noSubsetRowDataSE.csv")
 
 sub <- runInEnv({
     source(file.path("R", "scriptVerR.R"))
-    benchWrapper(replicate = 1, nCell = c(4000), subsetRowData = TRUE, SE = TRUE)
+    benchWrapper(replicate = 3, nCell = c(500, 1000, 2000, 4000), subsetRowData = TRUE, SE = TRUE)
 })
 
 sub <- bind_rows(sub, .id = "version")
