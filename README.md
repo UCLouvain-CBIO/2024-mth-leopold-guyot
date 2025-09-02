@@ -1,9 +1,3 @@
-This repository contains all the code written and used for the Master’s thesis in Bioinformatics at Université Libre de Bruxelles (ULB):
-
-“Towards Optimised Use of Software and Statistical Infrastructure for Single-Cell Proteomics”
-
-The thesis document (PDF) is available [here](https://github.com/UCLouvain-CBIO/2024-mth-leopold-guyot/blob/main/master_thesis_leopold_guyot_2025.pdf).
-
 # Relevant PRs:
 
 ## subsetByColData
